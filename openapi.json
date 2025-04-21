@@ -1,0 +1,370 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Lettermint",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "http:\/\/localhost\/v1"
+    }
+  ],
+  "paths": {
+    "\/send": {
+      "post": {
+        "operationId": "sendMail",
+        "tags": [
+          "Email",
+          "SendMail"
+        ],
+        "parameters": [
+          {
+            "name": "x-lettermint-token",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application\/json": {
+              "schema": {
+                "$ref": "#\/components\/schemas\/SendMailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application\/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "$ref": "#\/components\/schemas\/MessageStatus"
+                    }
+                  },
+                  "required": [
+                    "message_id",
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application\/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#\/components\/responses\/ValidationException"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DnsRecordResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "record_type": {
+            "$ref": "#\/components\/schemas\/RecordType"
+          },
+          "content": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#\/components\/schemas\/DnsRecordStatus"
+          },
+          "internal_type": {
+            "anyOf": [
+              {
+                "$ref": "#\/components\/schemas\/InternalRecordType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "hostname",
+          "record_type",
+          "content",
+          "status",
+          "internal_type"
+        ],
+        "title": "DnsRecordResource"
+      },
+      "DnsRecordStatus": {
+        "type": "string",
+        "description": "| |\n|---|\n| `active` <br\/> The record is active and verified. |\n| `failed` <br\/> The record could not be verified. |\n| `pending` <br\/> The record is pending verification. |",
+        "enum": [
+          "active",
+          "failed",
+          "pending"
+        ],
+        "title": "DnsRecordStatus"
+      },
+      "DomainResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#\/components\/schemas\/DomainStatus"
+          },
+          "dns_records": {
+            "type": "array",
+            "items": {
+              "$ref": "#\/components\/schemas\/DnsRecordResource"
+            }
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DomainResource"
+      },
+      "DomainStatus": {
+        "type": "string",
+        "description": "| |\n|---|\n| `verified` <br\/> The record is active and verified. |\n| `partially_verified` <br\/> The record could not be verified. |\n| `pending_verification` <br\/> The record is pending verification. |\n| `failed_verification` <br\/> The record is not verified. |",
+        "enum": [
+          "verified",
+          "partially_verified",
+          "pending_verification",
+          "failed_verification"
+        ],
+        "title": "DomainStatus"
+      },
+      "InternalRecordType": {
+        "type": "string",
+        "enum": [
+          "dkim",
+          "return_path",
+          "dmarc"
+        ],
+        "title": "InternalRecordType"
+      },
+      "MessageStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "queued",
+          "suppressed",
+          "processed",
+          "delivered",
+          "soft_bounced",
+          "hard_bounced",
+          "spam_complaint",
+          "failed"
+        ],
+        "title": "MessageStatus"
+      },
+      "RecordType": {
+        "type": "string",
+        "enum": [
+          "TXT",
+          "CNAME"
+        ],
+        "title": "RecordType"
+      },
+      "SendMailRequest": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 998
+          },
+          "html": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bcc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reply_to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "filename": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "filename",
+                "content"
+              ]
+            }
+          }
+        },
+        "required": [
+          "from",
+          "subject",
+          "to"
+        ],
+        "title": "SendMailRequest"
+      }
+    },
+    "responses": {
+      "AuthorizationException": {
+        "description": "Authorization error",
+        "content": {
+          "application\/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "AuthenticationException": {
+        "description": "Unauthenticated",
+        "content": {
+          "application\/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "ValidationException": {
+        "description": "Validation error",
+        "content": {
+          "application\/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Errors overview."
+                },
+                "errors": {
+                  "type": "object",
+                  "description": "A detailed description of each field that failed validation.",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "message",
+                "errors"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

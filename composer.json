@@ -1,0 +1,54 @@
+{
+    "name": "lettermint/lettermint-php",
+    "description": "Official Lettermint PHP SDK.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Bjarn Bronsveld",
+            "email": "bjarn@lettermint.co",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.9"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.8",
+        "mockery/mockery": "^1.6",
+        "friendsofphp/php-cs-fixer": "^3.75"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lettermint\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Lettermint\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
+        "test": "pest"
+    },
+    "keywords": [
+        "lettermint",
+        "email",
+        "sdk",
+        "esp",
+        "mail",
+        "api"
+    ],
+    "support": {
+        "issues": "https://github.com/lettermint/lettermint-php/issues",
+        "source": "https://github.com/lettermint/lettermint-php"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
