@@ -50,17 +50,4 @@ class HttpClient
             throw new \Exception('API request failed: ' . $e->getMessage(), 0, $e);
         }
     }
-
-    /**
-     * Direct post with arbitrary payload support
-     *
-     * @param string $path
-     * @param array|null $data
-     * @return array
-     * @throws \Exception
-     */
-    public function postPayload(string $path, ?array $data = null): array
-    {
-        return $this->post($path, $data ?? []);
-    }
 }

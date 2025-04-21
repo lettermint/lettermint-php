@@ -10,6 +10,20 @@ class EmailEndpoint extends Endpoint
     private array $payload = [];
 
     /**
+     * Set the custom headeres.
+     *
+     * @example ["Key" => "Value"]
+     *
+     * @param array<string, string> ...$headers The custom headers.
+     * @return self
+     */
+    public function headers(array ...$headers): self
+    {
+        $this->payload['headers'] = $headers;
+        return $this;
+    }
+
+    /**
      * Set the sender email address.
      *
      * Supports RFC 5322 addresses, e.g. <EMAIL>, <NAME> <<EMAIL>>.
