@@ -31,3 +31,4 @@ testbench.yaml
 /docs
 /coverage
 composer.lock
+openapi.json
