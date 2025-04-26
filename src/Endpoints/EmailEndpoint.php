@@ -14,10 +14,10 @@ class EmailEndpoint extends Endpoint
      *
      * @example ["Key" => "Value"]
      *
-     * @param array<string, string> ...$headers The custom headers.
+     * @param array<string, string> $headers The custom headers.
      * @return self
      */
-    public function headers(array ...$headers): self
+    public function headers(array $headers): self
     {
         $this->payload['headers'] = $headers;
         return $this;

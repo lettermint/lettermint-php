@@ -165,7 +165,7 @@ test('it handles custom headers', function () {
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
-            'headers' => [['X-Custom' => 'Value']]
+            'headers' => ['X-Custom' => 'Value']
         ])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
