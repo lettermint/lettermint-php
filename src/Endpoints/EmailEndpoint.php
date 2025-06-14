@@ -141,6 +141,18 @@ class EmailEndpoint extends Endpoint
     }
 
     /**
+     * Set the route id for the email.
+     *
+     * @param string $route The route id to use for sending.
+     * @return self
+     */
+    public function route(string $route): self
+    {
+        $this->payload['route'] = $route;
+        return $this;
+    }
+
+    /**
      * Send the composed email using the current payload.
      *
      * @return array The API response as an associative array.
