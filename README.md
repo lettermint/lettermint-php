@@ -56,6 +56,7 @@ $lettermint->email
     ->text('Hello!')
     ->headers(['X-Custom-Header' => 'Value'])
     ->attach('document.pdf', base64_encode($fileContent))
+    ->route('my-route-id')
     ->send();
 ```
 
