@@ -20,18 +20,18 @@ You can install the package via composer:
 composer require lettermint/lettermint-php
 ```
 
-
 ## Usage
 
 Initialize the Lettermint client with your API token:
+
 ```php
 $lettermint = new Lettermint\Lettermint('your-api-token');
 ```
 
-
 ### Sending Emails
 
 The SDK provides a fluent interface for composing and sending emails:
+
 ```php
 $response = $lettermint->email
                        ->from('sender@example.com')
@@ -57,9 +57,28 @@ $lettermint->email
     ->headers(['X-Custom-Header' => 'Value'])
     ->attach('document.pdf', base64_encode($fileContent))
     ->route('my-route-id')
+    ->idempotencyKey('unique-request-id-123')
     ->send();
 ```
 
+### Idempotency
+
+To ensure that duplicate requests are not processed, you can use an idempotency key:
+
+```php
+$response = $lettermint->email
+                       ->from('sender@example.com')
+                       ->to('recipient@example.com')
+                       ->subject('Hello from Lettermint!')
+                       ->text('Hello! This is a test email.')
+                       ->idempotencyKey('unique-request-id-123')
+                       ->send();
+```
+
+The idempotency key should be a unique string that you generate for each unique email you want to send. If you make the
+same request with the same idempotency key, the API will return the same response without sending a duplicate email.
+
+For more information, refer to the [documentation](https://docs.lettermint.co/platform/emails/idempotency).
 
 ## Testing
 
