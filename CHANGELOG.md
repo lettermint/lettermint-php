@@ -2,6 +2,17 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 1.1.1 - 2025-06-28
+
+This release fixes the invalid tag of 1.1.0 - which doesn't contain the changes it should've. Sorry!
+
+### What's Changed
+
+* feat: add idempotency support to EmailEndpoint by @bjarn in https://github.com/lettermint/lettermint-php/pull/4
+* chore(deps): bump stefanzweifel/git-auto-commit-action from 5 to 6 by @dependabot in https://github.com/lettermint/lettermint-php/pull/3
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/1.1.0...1.1.1
+
 ## 1.1.0 - 2025-06-28
 
 **Full Changelog**: https://github.com/lettermint/lettermint-php/compare/1.0.0...1.1.0
