@@ -1,7 +1,7 @@
 <?php
 
-use Lettermint\Endpoints\EmailEndpoint;
 use Lettermint\Client\HttpClient;
+use Lettermint\Endpoints\EmailEndpoint;
 
 beforeEach(function () {
     $this->httpClient = Mockery::mock(HttpClient::class);
@@ -19,8 +19,8 @@ test('it builds email with basic required fields', function () {
         ->with('/v1/send', [
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
-            'subject' => 'Test Subject'
-        ])
+            'subject' => 'Test Subject',
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $response = $this->endpoint
@@ -39,8 +39,8 @@ test('it supports multiple recipients', function () {
         ->with('/v1/send', [
             'from' => 'sender@example.com',
             'to' => ['recipient1@example.com', 'recipient2@example.com'],
-            'subject' => 'Test Subject'
-        ])
+            'subject' => 'Test Subject',
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $this->endpoint
@@ -59,8 +59,8 @@ test('it handles HTML and text content', function () {
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
             'html' => '<p>HTML content</p>',
-            'text' => 'Plain text content'
-        ])
+            'text' => 'Plain text content',
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $this->endpoint
@@ -80,8 +80,8 @@ test('it handles CC recipients', function () {
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
-            'cc' => ['cc1@example.com', 'cc2@example.com']
-        ])
+            'cc' => ['cc1@example.com', 'cc2@example.com'],
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $this->endpoint
@@ -100,8 +100,8 @@ test('it handles BCC recipients', function () {
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
-            'bcc' => ['bcc1@example.com', 'bcc2@example.com']
-        ])
+            'bcc' => ['bcc1@example.com', 'bcc2@example.com'],
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $this->endpoint
@@ -120,8 +120,8 @@ test('it handles reply-to addresses', function () {
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
-            'reply_to' => ['reply@example.com']
-        ])
+            'reply_to' => ['reply@example.com'],
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $this->endpoint
@@ -135,7 +135,7 @@ test('it handles reply-to addresses', function () {
 test('it handles attachments', function () {
     $attachment = [
         'filename' => 'test.pdf',
-        'content' => 'base64encodedcontent'
+        'content' => 'base64encodedcontent',
     ];
 
     $this->httpClient
@@ -145,8 +145,8 @@ test('it handles attachments', function () {
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
-            'attachments' => [$attachment]
-        ])
+            'attachments' => [$attachment],
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $this->endpoint
@@ -165,8 +165,8 @@ test('it handles custom headers', function () {
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
-            'headers' => ['X-Custom' => 'Value']
-        ])
+            'headers' => ['X-Custom' => 'Value'],
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $this->endpoint
@@ -184,13 +184,52 @@ test('it supports RFC 5322 email addresses', function () {
         ->with('/v1/send', [
             'from' => 'John Doe <john@example.com>',
             'to' => ['Jane Doe <jane@example.com>'],
-            'subject' => 'Test Subject'
-        ])
+            'subject' => 'Test Subject',
+        ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
     $this->endpoint
         ->from('John Doe <john@example.com>')
         ->to('Jane Doe <jane@example.com>')
+        ->subject('Test Subject')
+        ->send();
+});
+
+test('it handles idempotency key', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+        ], ['Idempotency-Key' => 'unique-key-123'])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $response = $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->idempotencyKey('unique-key-123')
+        ->send();
+
+    expect($response)->toBe(['message_id' => '123', 'status' => 'pending']);
+});
+
+test('it sends without idempotency key when not set', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+        ], [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
         ->subject('Test Subject')
         ->send();
 });
