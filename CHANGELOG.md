@@ -2,6 +2,10 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 1.1.0 - 2025-06-28
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/1.0.0...1.1.0
+
 ## 1.0.0 - 2025-06-14
 
 ### What's Changed
