@@ -2,6 +2,14 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## v1.2.0 - 2025-08-23
+
+### What's Changed
+
+* Add metadata support for emails by @bjarn in https://github.com/lettermint/lettermint-php/pull/5
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/1.1.1...1.2.0
+
 ## 1.1.1 - 2025-06-28
 
 This release fixes the invalid tag of 1.1.0 - which doesn't contain the changes it should've. Sorry!
