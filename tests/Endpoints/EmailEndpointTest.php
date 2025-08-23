@@ -233,3 +233,23 @@ test('it sends without idempotency key when not set', function () {
         ->subject('Test Subject')
         ->send();
 });
+
+test('it handles metadata', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+            'metadata' => ['foo' => 'bar'],
+        ], [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->metadata(['foo' => 'bar'])
+        ->send();
+});

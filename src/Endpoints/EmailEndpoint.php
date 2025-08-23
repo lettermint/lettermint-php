@@ -15,7 +15,7 @@ class EmailEndpoint extends Endpoint
     private ?string $idempotencyKey = null;
 
     /**
-     * Set the custom headeres.
+     * Set the custom headers.
      *
      * @example ["Key" => "Value"]
      *
@@ -165,6 +165,20 @@ class EmailEndpoint extends Endpoint
     public function idempotencyKey(string $key): self
     {
         $this->idempotencyKey = $key;
+
+        return $this;
+    }
+
+    /**
+     * Set custom metadata.
+     *
+     * @example ["key" => "value"]
+     *
+     * @param  array<string, string>  $metadata  The metadata object.
+     */
+    public function metadata(array $metadata): self
+    {
+        $this->payload['metadata'] = $metadata;
 
         return $this;
     }
