@@ -253,3 +253,23 @@ test('it handles metadata', function () {
         ->metadata(['foo' => 'bar'])
         ->send();
 });
+
+test('it handles tags', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+            'tag' => 'campaign',
+        ], [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->tag('campaign')
+        ->send();
+});
