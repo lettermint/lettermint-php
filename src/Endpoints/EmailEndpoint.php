@@ -184,6 +184,18 @@ class EmailEndpoint extends Endpoint
     }
 
     /**
+     * Set the tag of the email.
+     *
+     * @param  string|null  $tag  The tag formatted as slug
+     */
+    public function tag(?string $tag): self
+    {
+        $this->payload['tag'] = $tag;
+
+        return $this;
+    }
+
+    /**
      * Send the composed email using the current payload.
      *
      * @return array The API response as an associative array.
