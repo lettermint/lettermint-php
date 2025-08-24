@@ -2,6 +2,14 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## v1.3.0 - 2025-08-24
+
+### What's Changed
+
+* Add tag support to EmailEndpoint by @bjarn in https://github.com/lettermint/lettermint-php/pull/6
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/1.2.0...1.3.0
+
 ## v1.2.0 - 2025-08-23
 
 ### What's Changed
