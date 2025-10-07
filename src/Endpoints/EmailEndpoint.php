@@ -134,13 +134,20 @@ class EmailEndpoint extends Endpoint
      *
      * @param  string  $filename  The attachment filename.
      * @param  string  $base64Content  The base64-encoded file content.
+     * @param  string|null  $contentId  Optional content ID for inline attachments.
      */
-    public function attach(string $filename, string $base64Content): self
+    public function attach(string $filename, string $base64Content, ?string $contentId = null): self
     {
-        $this->payload['attachments'][] = [
+        $attachment = [
             'filename' => $filename,
             'content' => $base64Content,
         ];
+
+        if ($contentId !== null) {
+            $attachment['content_id'] = $contentId;
+        }
+
+        $this->payload['attachments'][] = $attachment;
 
         return $this;
     }

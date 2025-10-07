@@ -157,6 +157,34 @@ test('it handles attachments', function () {
         ->send();
 });
 
+test('it handles attachments with content_id', function () {
+    $attachment = [
+        'filename' => 'logo.png',
+        'content' => 'base64encodedimage',
+        'content_id' => 'logo@example.com',
+    ];
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+            'html' => '<img src="cid:logo@example.com">',
+            'attachments' => [$attachment],
+        ], [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->html('<img src="cid:logo@example.com">')
+        ->attach('logo.png', 'base64encodedimage', 'logo@example.com')
+        ->send();
+});
+
 test('it handles custom headers', function () {
     $this->httpClient
         ->shouldReceive('post')
