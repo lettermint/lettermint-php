@@ -2,6 +2,15 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 1.4.0 - 2025-10-07
+
+### What's Changed
+
+* feat: add inline attachment support to EmailEndpoint by @bjarn in https://github.com/lettermint/lettermint-php/pull/8
+* chore(deps): bump actions/checkout from 4 to 5 by @dependabot[bot] in https://github.com/lettermint/lettermint-php/pull/7
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/1.3.0...1.4.0
+
 ## v1.3.0 - 2025-08-24
 
 ### What's Changed
