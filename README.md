@@ -56,8 +56,23 @@ $lettermint->email
     ->text('Hello!')
     ->headers(['X-Custom-Header' => 'Value'])
     ->attach('document.pdf', base64_encode($fileContent))
+    ->attach('logo.png', base64_encode($logoContent), 'logo@example.com')
     ->route('my-route-id')
     ->idempotencyKey('unique-request-id-123')
+    ->send();
+```
+
+#### Inline Attachments
+
+You can embed images and other content in your HTML emails using content IDs:
+
+```php
+$lettermint->email
+    ->from('sender@example.com')
+    ->to('recipient@example.com')
+    ->subject('Email with inline image')
+    ->html('<p>Here is an image: <img src="cid:logo@example.com"></p>')
+    ->attach('logo.png', base64_encode($imageContent), 'logo@example.com')
     ->send();
 ```
 
