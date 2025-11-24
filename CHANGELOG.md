@@ -2,6 +2,16 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 1.4.1 - 2025-11-24
+
+### What's Changed
+
+* chore(deps): bump stefanzweifel/git-auto-commit-action from 6 to 7 by @dependabot[bot] in https://github.com/lettermint/lettermint-php/pull/10
+* chore(deps): bump actions/checkout from 3 to 6 by @dependabot[bot] in https://github.com/lettermint/lettermint-php/pull/11
+* feat(send): clear payload and idempotency key after sending by @Bjornftw in https://github.com/lettermint/lettermint-php/pull/12
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/1.4.0...1.4.1
+
 ## 1.4.0 - 2025-10-07
 
 ### What's Changed
