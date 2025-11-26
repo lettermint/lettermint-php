@@ -1,5 +1,6 @@
 {
     "name": "lettermint/lettermint-php",
+    "version": "1.4.99",
     "description": "Official Lettermint PHP SDK.",
     "type": "library",
     "keywords": [
