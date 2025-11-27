@@ -2,6 +2,4 @@
 
 namespace Lettermint\Exceptions;
 
-class TimestampToleranceException extends WebhookVerificationException
-{
-}
+class TimestampToleranceException extends WebhookVerificationException {}

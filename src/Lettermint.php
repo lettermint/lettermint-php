@@ -2,8 +2,8 @@
 
 namespace Lettermint;
 
-use Lettermint\Endpoints\EmailEndpoint;
 use Lettermint\Client\HttpClient;
+use Lettermint\Endpoints\EmailEndpoint;
 
 /**
  * @property-read EmailEndpoint $email Access the send endpoint {@see EmailEndpoint}
@@ -11,8 +11,11 @@ use Lettermint\Client\HttpClient;
 class Lettermint
 {
     private string $apiToken;
+
     private string $baseUrl;
+
     private HttpClient $httpClient;
+
     private array $endpoints = [];
 
     protected array $endpointRegistry = [
@@ -35,6 +38,7 @@ class Lettermint
         if (array_key_exists($name, $this->endpointRegistry)) {
             $class = $this->endpointRegistry[$name];
             $this->endpoints[$name] = new $class($this->httpClient);
+
             return $this->endpoints[$name];
         }
 
