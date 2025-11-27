@@ -22,8 +22,8 @@ final class Webhook
     /**
      * Create a new webhook verifier instance.
      *
-     * @param string $secret The webhook signing secret
-     * @param int $tolerance Maximum allowed time difference in seconds (default: 300)
+     * @param  string  $secret  The webhook signing secret
+     * @param  int  $tolerance  Maximum allowed time difference in seconds (default: 300)
      *
      * @throws \InvalidArgumentException If secret is empty
      */
@@ -40,9 +40,9 @@ final class Webhook
     /**
      * Verify a webhook signature and return the decoded payload.
      *
-     * @param string $payload The raw request body
-     * @param string $signature The signature header value (format: t={timestamp},v1={hash})
-     * @param int|null $timestamp Optional timestamp from delivery header for cross-validation
+     * @param  string  $payload  The raw request body
+     * @param  string  $signature  The signature header value (format: t={timestamp},v1={hash})
+     * @param  int|null  $timestamp  Optional timestamp from delivery header for cross-validation
      * @return array<string, mixed> The decoded webhook payload
      *
      * @throws WebhookVerificationException If signature format is invalid or timestamps mismatch
@@ -82,8 +82,8 @@ final class Webhook
     /**
      * Verify a webhook using HTTP headers and return the decoded payload.
      *
-     * @param array<string, string> $headers HTTP headers from the request
-     * @param string $payload The raw request body
+     * @param  array<string, string>  $headers  HTTP headers from the request
+     * @param  string  $payload  The raw request body
      * @return array<string, mixed> The decoded webhook payload
      *
      * @throws WebhookVerificationException If required headers are missing or verification fails
@@ -112,11 +112,11 @@ final class Webhook
     /**
      * Static convenience method to verify a webhook signature.
      *
-     * @param string $payload The raw request body
-     * @param string $signature The signature header value (format: t={timestamp},v1={hash})
-     * @param string $secret The webhook signing secret
-     * @param int|null $timestamp Optional timestamp from delivery header for cross-validation
-     * @param int $tolerance Maximum allowed time difference in seconds (default: 300)
+     * @param  string  $payload  The raw request body
+     * @param  string  $signature  The signature header value (format: t={timestamp},v1={hash})
+     * @param  string  $secret  The webhook signing secret
+     * @param  int|null  $timestamp  Optional timestamp from delivery header for cross-validation
+     * @param  int  $tolerance  Maximum allowed time difference in seconds (default: 300)
      * @return array<string, mixed> The decoded webhook payload
      *
      * @throws \InvalidArgumentException If secret is empty

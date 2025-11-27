@@ -11,8 +11,9 @@ const TEST_PAYLOAD = '{"event":"email.sent","data":{"id":"123"}}';
 
 function generateValidSignature(string $payload, int $timestamp, string $secret = TEST_SECRET): string
 {
-    $signedContent = $timestamp . '.' . $payload;
+    $signedContent = $timestamp.'.'.$payload;
     $signature = hash_hmac('sha256', $signedContent, $secret);
+
     return "t={$timestamp},v1={$signature}";
 }
 
