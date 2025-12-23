@@ -2,6 +2,14 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 1.5.1 - 2025-12-23
+
+### What's Changed
+
+* feat: add custom User-Agent header to HttpClient by @bjarn in https://github.com/lettermint/lettermint-php/pull/14
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/1.5.0...1.5.1
+
 ## 1.5.0 - 2025-11-27
 
 ### What's Changed
