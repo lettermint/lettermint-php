@@ -2,6 +2,7 @@
 
 namespace Lettermint\Client;
 
+use Composer\InstalledVersions;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
@@ -23,6 +24,11 @@ class HttpClient
             'headers' => [
                 'Content-Type' => 'application/json',
                 'x-lettermint-token' => $this->apiToken,
+                'User-Agent' => sprintf(
+                    'Lettermint/%s (PHP; PHP %s)',
+                    InstalledVersions::getPrettyVersion('lettermint/lettermint-php') ?? 'unknown',
+                    PHP_VERSION
+                ),
             ],
         ]);
     }
