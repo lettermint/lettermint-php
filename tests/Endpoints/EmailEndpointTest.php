@@ -12,6 +12,23 @@ afterEach(function () {
     Mockery::close();
 });
 
+test('it documents the send response shape', function () {
+    $classReflection = new ReflectionClass(EmailEndpoint::class);
+    $classDocComment = $classReflection->getDocComment();
+    $methodReflection = new ReflectionMethod(EmailEndpoint::class, 'send');
+    $methodDocComment = $methodReflection->getDocComment();
+
+    expect($classDocComment)
+        ->toBeString()
+        ->toContain('@phpstan-type SendResponse')
+        ->toContain('message_id: string')
+        ->toContain('status: string');
+
+    expect($methodDocComment)
+        ->toBeString()
+        ->toContain('@phpstan-return SendResponse');
+});
+
 test('it builds email with basic required fields', function () {
     $this->httpClient
         ->shouldReceive('post')

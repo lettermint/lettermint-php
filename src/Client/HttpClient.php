@@ -6,6 +6,11 @@ use Composer\InstalledVersions;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
+/**
+ * @phpstan-type RequestHeaders array<string, string>
+ * @phpstan-type RequestBody array<string, mixed>
+ * @phpstan-type ApiResponse array<string, mixed>
+ */
 class HttpClient
 {
     private string $apiToken;
@@ -36,8 +41,9 @@ class HttpClient
     /**
      * Fluent-style usage with dedicated endpoints (builder pattern)
      *
-     * @param  array  $headers  Additional headers for this request
-     * @return array Resulting API response
+     * @param  RequestBody  $data  Request payload
+     * @param  RequestHeaders  $headers  Additional headers for this request
+     * @return ApiResponse Resulting API response
      *
      * @throws \Exception On HTTP or decode failure
      */

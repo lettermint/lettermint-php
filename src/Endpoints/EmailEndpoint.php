@@ -2,10 +2,36 @@
 
 namespace Lettermint\Endpoints;
 
+/**
+ * @phpstan-type AttachmentPayload array{
+ *     filename: string,
+ *     content: string,
+ *     content_id?: string
+ * }
+ * @phpstan-type EmailPayload array{
+ *     from?: string,
+ *     to?: list<string>,
+ *     subject?: string,
+ *     html?: string|null,
+ *     text?: string|null,
+ *     cc?: list<string>,
+ *     bcc?: list<string>,
+ *     reply_to?: list<string>,
+ *     attachments?: list<AttachmentPayload>,
+ *     route?: string,
+ *     metadata?: array<string, string>,
+ *     tag?: string|null,
+ *     headers?: array<string, string>
+ * }
+ * @phpstan-type SendResponse array{
+ *     message_id: string,
+ *     status: string
+ * }
+ */
 class EmailEndpoint extends Endpoint
 {
     /**
-     * @var array The email payload to be sent.
+     * @var EmailPayload The email payload to be sent.
      */
     private array $payload = [];
 
@@ -138,6 +164,7 @@ class EmailEndpoint extends Endpoint
      */
     public function attach(string $filename, string $base64Content, ?string $contentId = null): self
     {
+        /** @var AttachmentPayload $attachment */
         $attachment = [
             'filename' => $filename,
             'content' => $base64Content,
@@ -205,7 +232,8 @@ class EmailEndpoint extends Endpoint
     /**
      * Send the composed email using the current payload.
      *
-     * @return array The API response as an associative array.
+     * @return array{message_id: string, status: string} The API response as an associative array.
+     * @phpstan-return SendResponse
      *
      * @throws \Exception On HTTP or API failure.
      */

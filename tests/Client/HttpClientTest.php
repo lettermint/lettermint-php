@@ -12,6 +12,25 @@ beforeEach(function () {
     $this->baseUrl = 'http://api.example.com';
 });
 
+test('it documents typed request and response arrays', function () {
+    $classReflection = new ReflectionClass(HttpClient::class);
+    $classDocComment = $classReflection->getDocComment();
+    $methodReflection = new ReflectionMethod(HttpClient::class, 'post');
+    $methodDocComment = $methodReflection->getDocComment();
+
+    expect($classDocComment)
+        ->toBeString()
+        ->toContain('@phpstan-type RequestBody')
+        ->toContain('@phpstan-type RequestHeaders')
+        ->toContain('@phpstan-type ApiResponse');
+
+    expect($methodDocComment)
+        ->toBeString()
+        ->toContain('@param  RequestBody  $data')
+        ->toContain('@param  RequestHeaders  $headers')
+        ->toContain('@return ApiResponse');
+});
+
 test('it properly constructs with api token and base url', function () {
     $client = new HttpClient($this->apiToken, $this->baseUrl);
 
