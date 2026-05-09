@@ -3,10 +3,20 @@
 namespace Lettermint\Endpoints;
 
 /**
+ * @phpstan-import-type SendMailRequest from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type SendBatchMailRequest from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type SendMailResponse from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type SendBatchMailResponse from \Lettermint\Types\ApiTypes
+ *
  * @phpstan-type AttachmentPayload array{
  *     filename: string,
  *     content: string,
+ *     content_type?: string,
  *     content_id?: string
+ * }
+ * @phpstan-type EmailSettings array{
+ *     track_opens?: bool,
+ *     track_clicks?: bool
  * }
  * @phpstan-type EmailPayload array{
  *     from?: string,
@@ -21,6 +31,7 @@ namespace Lettermint\Endpoints;
  *     route?: string,
  *     metadata?: array<string, string>,
  *     tag?: string|null,
+ *     settings?: EmailSettings|null,
  *     headers?: array<string, string>
  * }
  * @phpstan-type SendResponse array{
@@ -161,14 +172,19 @@ class EmailEndpoint extends Endpoint
      * @param  string  $filename  The attachment filename.
      * @param  string  $base64Content  The base64-encoded file content.
      * @param  string|null  $contentId  Optional content ID for inline attachments.
+     * @param  string|null  $contentType  Optional MIME type for the attachment.
      */
-    public function attach(string $filename, string $base64Content, ?string $contentId = null): self
+    public function attach(string $filename, string $base64Content, ?string $contentId = null, ?string $contentType = null): self
     {
         /** @var AttachmentPayload $attachment */
         $attachment = [
             'filename' => $filename,
             'content' => $base64Content,
         ];
+
+        if ($contentType !== null) {
+            $attachment['content_type'] = $contentType;
+        }
 
         if ($contentId !== null) {
             $attachment['content_id'] = $contentId;
@@ -230,14 +246,51 @@ class EmailEndpoint extends Endpoint
     }
 
     /**
-     * Send the composed email using the current payload.
+     * Set per-email settings.
      *
-     * @return array{message_id: string, status: string} The API response as an associative array.
-     * @phpstan-return SendResponse
+     * @param  EmailSettings  $settings
+     */
+    public function settings(array $settings): self
+    {
+        $this->payload['settings'] = $settings;
+
+        return $this;
+    }
+
+    /**
+     * Ping the Sending API.
      *
      * @throws \Exception On HTTP or API failure.
      */
-    public function send(): array
+    public function ping(): int
+    {
+        return $this->getInt('/v1/ping');
+    }
+
+    /**
+     * Send multiple emails in a batch.
+     *
+     * @phpstan-param SendBatchMailRequest $messages
+     *
+     * @phpstan-return SendBatchMailResponse
+     *
+     * @throws \Exception On HTTP or API failure.
+     */
+    public function sendBatch(array $messages): array
+    {
+        return $this->postArray('/v1/send/batch', $messages, []);
+    }
+
+    /**
+     * Send the composed email using the current payload.
+     *
+     * @phpstan-param SendMailRequest|null $payload
+     *
+     * @phpstan-return SendMailResponse
+     *
+     * @throws \Exception On HTTP or API failure.
+     */
+    public function send(?array $payload = null): array
     {
         $headers = [];
 
@@ -245,7 +298,7 @@ class EmailEndpoint extends Endpoint
             $headers['Idempotency-Key'] = $this->idempotencyKey;
         }
 
-        $result = $this->httpClient->post('/v1/send', $this->payload, $headers);
+        $result = $this->postArray('/v1/send', $payload ?? $this->payload, $headers);
 
         $this->payload = [];
         $this->idempotencyKey = null;

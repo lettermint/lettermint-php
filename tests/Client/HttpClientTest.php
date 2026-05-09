@@ -1,11 +1,11 @@
 <?php
 
-use Lettermint\Client\HttpClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
+use Lettermint\Client\HttpClient;
 
 beforeEach(function () {
     $this->apiToken = 'test-token';
@@ -40,11 +40,11 @@ test('it properly constructs with api token and base url', function () {
 test('it properly handles successful API responses', function () {
     $mockResponse = [
         'message_id' => '123abc',
-        'status' => 'pending'
+        'status' => 'pending',
     ];
 
     $mock = new MockHandler([
-        new Response(202, [], json_encode($mockResponse))
+        new Response(202, [], json_encode($mockResponse)),
     ]);
 
     $handlerStack = HandlerStack::create($mock);
@@ -57,7 +57,7 @@ test('it properly handles successful API responses', function () {
         'headers' => [
             'Content-Type' => 'application/json',
             'x-lettermint-token' => $this->apiToken,
-        ]
+        ],
     ]);
 
     $client = new HttpClient($this->apiToken, $this->baseUrl);
@@ -69,7 +69,7 @@ test('it properly handles successful API responses', function () {
     $result = $client->post('/send', [
         'from' => 'test@example.com',
         'to' => ['recipient@example.com'],
-        'subject' => 'Test Email'
+        'subject' => 'Test Email',
     ]);
 
     expect($result)->toBe($mockResponse);
@@ -79,9 +79,9 @@ test('it properly handles successful API responses', function () {
     expect($container[0]['request']->getHeader('Content-Type')[0])->toBe('application/json');
 });
 
-test('it throws exception on invalid JSON response', function () {
+test('it properly handles scalar JSON API responses', function () {
     $mock = new MockHandler([
-        new Response(200, [], 'invalid-json')
+        new Response(200, [], '200'),
     ]);
 
     $handlerStack = HandlerStack::create($mock);
@@ -93,16 +93,50 @@ test('it throws exception on invalid JSON response', function () {
     $property->setAccessible(true);
     $property->setValue($client, $mockGuzzle);
 
-    expect(fn() => $client->post('/send', [
+    expect($client->get('/ping'))->toBe(200);
+});
+
+test('it properly handles raw API responses', function () {
+    $mock = new MockHandler([
+        new Response(200, ['Content-Type' => 'text/plain'], 'plain message body'),
+    ]);
+
+    $handlerStack = HandlerStack::create($mock);
+    $mockGuzzle = new Client(['handler' => $handlerStack]);
+
+    $client = new HttpClient($this->apiToken, $this->baseUrl);
+    $reflection = new ReflectionClass($client);
+    $property = $reflection->getProperty('client');
+    $property->setAccessible(true);
+    $property->setValue($client, $mockGuzzle);
+
+    expect($client->getRaw('/messages/message-id/text'))->toBe('plain message body');
+});
+
+test('it throws exception on invalid JSON response', function () {
+    $mock = new MockHandler([
+        new Response(200, [], 'invalid-json'),
+    ]);
+
+    $handlerStack = HandlerStack::create($mock);
+    $mockGuzzle = new Client(['handler' => $handlerStack]);
+
+    $client = new HttpClient($this->apiToken, $this->baseUrl);
+    $reflection = new ReflectionClass($client);
+    $property = $reflection->getProperty('client');
+    $property->setAccessible(true);
+    $property->setValue($client, $mockGuzzle);
+
+    expect(fn () => $client->post('/send', [
         'from' => 'test@example.com',
         'to' => ['recipient@example.com'],
-        'subject' => 'Test Email'
+        'subject' => 'Test Email',
     ]))->toThrow(\Exception::class, 'Could not decode API response');
 });
 
 test('it throws exception on API error', function () {
     $mock = new MockHandler([
-        new Response(400, [], json_encode(['error' => 'Bad Request']))
+        new Response(400, [], json_encode(['error' => 'Bad Request'])),
     ]);
 
     $handlerStack = HandlerStack::create($mock);
@@ -114,10 +148,10 @@ test('it throws exception on API error', function () {
     $property->setAccessible(true);
     $property->setValue($client, $mockGuzzle);
 
-    expect(fn() => $client->post('/send', [
+    expect(fn () => $client->post('/send', [
         'from' => 'test@example.com',
         'to' => ['recipient@example.com'],
-        'subject' => 'Test Email'
+        'subject' => 'Test Email',
     ]))->toThrow(\Exception::class, 'API request failed');
 });
 

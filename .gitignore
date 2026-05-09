@@ -33,3 +33,5 @@ testbench.yaml
 composer.lock
 openapi.json
 CLAUDE.md
+AGENTS.md
+.DS_Store

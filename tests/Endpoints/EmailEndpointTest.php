@@ -26,7 +26,7 @@ test('it documents the send response shape', function () {
 
     expect($methodDocComment)
         ->toBeString()
-        ->toContain('@phpstan-return SendResponse');
+        ->toContain('@phpstan-return SendMailResponse');
 });
 
 test('it builds email with basic required fields', function () {
@@ -199,6 +199,101 @@ test('it handles attachments with content_id', function () {
         ->subject('Test Subject')
         ->html('<img src="cid:logo@example.com">')
         ->attach('logo.png', 'base64encodedimage', 'logo@example.com')
+        ->send();
+});
+
+test('it sends direct array payloads', function () {
+    $payload = [
+        'from' => 'sender@example.com',
+        'to' => ['recipient@example.com'],
+        'subject' => 'Test Subject',
+        'text' => 'Plain text content',
+    ];
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', $payload, [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $response = $this->endpoint->send($payload);
+
+    expect($response)->toBe(['message_id' => '123', 'status' => 'pending']);
+});
+
+test('it sends batch payloads', function () {
+    $messages = [
+        [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+        ],
+    ];
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send/batch', $messages, [])
+        ->andReturn(['data' => [['message_id' => '123', 'status' => 'pending']]]);
+
+    $response = $this->endpoint->sendBatch($messages);
+
+    expect($response)->toBe(['data' => [['message_id' => '123', 'status' => 'pending']]]);
+});
+
+test('it pings the sending API', function () {
+    $this->httpClient
+        ->shouldReceive('get')
+        ->once()
+        ->with('/v1/ping', [])
+        ->andReturn(200);
+
+    expect($this->endpoint->ping())->toBe(200);
+});
+
+test('it handles per email settings', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+            'settings' => ['track_opens' => false, 'track_clicks' => true],
+        ], [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->settings(['track_opens' => false, 'track_clicks' => true])
+        ->send();
+});
+
+test('it handles attachment content type', function () {
+    $attachment = [
+        'filename' => 'invite.ics',
+        'content' => 'base64encodedcalendar',
+        'content_type' => 'text/calendar; method=REQUEST',
+    ];
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+            'attachments' => [$attachment],
+        ], [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->attach('invite.ics', 'base64encodedcalendar', null, 'text/calendar; method=REQUEST')
         ->send();
 });
 

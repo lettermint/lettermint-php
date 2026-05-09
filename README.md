@@ -23,11 +23,20 @@ composer require lettermint/lettermint-php
 
 ## Usage
 
-Initialize the Lettermint client with your API token:
+Initialize the Lettermint client with your Sending API token:
 
 ```php
 $lettermint = new Lettermint\Lettermint('your-api-token');
 ```
+
+For new integrations, prefer the explicit Sending and Team clients:
+
+```php
+$sending = Lettermint\Lettermint::sending(getenv('LETTERMINT_SENDING_TOKEN'));
+$team = Lettermint\Lettermint::team(getenv('LETTERMINT_TEAM_TOKEN'));
+```
+
+Sending API tokens are project-specific and authenticate with the `x-lettermint-token` header. Team API tokens are team-scoped and authenticate with `Authorization: Bearer ...`. Keep these tokens separate and never reuse a Team token for sending-only workloads.
 
 ### Sending Emails
 
@@ -63,6 +72,36 @@ $lettermint->email
     ->send();
 ```
 
+You can also send with an array payload:
+
+```php
+$response = $sending->email->send([
+    'from' => 'sender@example.com',
+    'to' => ['recipient@example.com'],
+    'subject' => 'Hello from Lettermint!',
+    'text' => 'Hello! This is a test email.',
+]);
+```
+
+### Batch Sending
+
+```php
+$response = $sending->email->sendBatch([
+    [
+        'from' => 'sender@example.com',
+        'to' => ['recipient@example.com'],
+        'subject' => 'First email',
+        'text' => 'Hello!',
+    ],
+    [
+        'from' => 'sender@example.com',
+        'to' => ['another@example.com'],
+        'subject' => 'Second email',
+        'text' => 'Hello again!',
+    ],
+]);
+```
+
 #### Inline Attachments
 
 You can embed images and other content in your HTML emails using content IDs:
@@ -95,6 +134,48 @@ The idempotency key should be a unique string that you generate for each unique 
 same request with the same idempotency key, the API will return the same response without sending a duplicate email.
 
 For more information, refer to the [documentation](https://docs.lettermint.co/platform/emails/idempotency).
+
+### Team API
+
+Use the Team API client for team-scoped resources such as projects, domains, routes, suppressions, stats, messages, and webhooks:
+
+```php
+$team = Lettermint\Lettermint::team(getenv('LETTERMINT_TEAM_TOKEN'));
+
+$projects = $team->projects->list(['filter[search]' => 'production']);
+
+$project = $team->projects->create([
+    'name' => 'Production',
+    'smtp_enabled' => false,
+]);
+
+$team->domains->verifyDnsRecords('domain-id');
+
+$stats = $team->stats->retrieve([
+    'from' => '2026-05-01',
+    'to' => '2026-05-09',
+]);
+
+$team->suppressions->create([
+    'email' => 'user@example.com',
+    'reason' => 'manual',
+    'scope' => 'team',
+]);
+
+$team->webhooks->create([
+    'route_id' => 'route-id',
+    'name' => 'Production webhook',
+    'url' => 'https://example.com/lettermint/webhook',
+    'events' => ['message.sent', 'message.delivered'],
+]);
+```
+
+Both clients support `ping()`:
+
+```php
+$sending->ping();
+$team->ping();
+```
 
 ## Testing
 

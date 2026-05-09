@@ -31,7 +31,8 @@ test('it stores http client instance', function () {
 });
 
 test('it allows access to protected http client in child classes', function () {
-    $testEndpoint = new class($this->httpClient) extends Endpoint {
+    $testEndpoint = new class($this->httpClient) extends Endpoint
+    {
         public function getHttpClient(): HttpClient
         {
             return $this->httpClient;
@@ -39,4 +40,30 @@ test('it allows access to protected http client in child classes', function () {
     };
 
     expect($testEndpoint->getHttpClient())->toBe($this->httpClient);
+});
+
+test('it builds encoded versioned paths', function () {
+    $testEndpoint = new class($this->httpClient) extends Endpoint
+    {
+        public function publicPath(string $path, array $parameters = []): string
+        {
+            return $this->path($path, $parameters);
+        }
+    };
+
+    expect($testEndpoint->publicPath('/domains/{domainId}', ['domainId' => 'abc/123']))
+        ->toBe('/v1/domains/abc%2F123');
+});
+
+test('it requires path parameters', function () {
+    $testEndpoint = new class($this->httpClient) extends Endpoint
+    {
+        public function publicPath(string $path, array $parameters = []): string
+        {
+            return $this->path($path, $parameters);
+        }
+    };
+
+    expect(fn () => $testEndpoint->publicPath('/domains/{domainId}'))
+        ->toThrow(InvalidArgumentException::class, 'Missing path parameter: domainId');
 });

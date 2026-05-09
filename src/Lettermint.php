@@ -3,6 +3,8 @@
 namespace Lettermint;
 
 use Lettermint\Client\HttpClient;
+use Lettermint\Client\SendingClient;
+use Lettermint\Client\TeamClient;
 use Lettermint\Endpoints\EmailEndpoint;
 
 /**
@@ -27,6 +29,16 @@ class Lettermint
         $this->apiToken = $apiToken;
         $this->baseUrl = $baseUrl ?? 'https://api.lettermint.co/v1';
         $this->httpClient = new HttpClient($this->apiToken, $this->baseUrl);
+    }
+
+    public static function sending(string $apiToken, ?string $baseUrl = null): SendingClient
+    {
+        return new SendingClient($apiToken, $baseUrl);
+    }
+
+    public static function team(string $apiToken, ?string $baseUrl = null): TeamClient
+    {
+        return new TeamClient($apiToken, $baseUrl);
     }
 
     public function __get($name)
