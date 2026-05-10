@@ -187,6 +187,10 @@ composer test
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
+## Upgrading
+
+Please see [UPGRADE.md](UPGRADE.md) for guidance on upgrading from v1 to v2.
+
 ## Contributing
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
