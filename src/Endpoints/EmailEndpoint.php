@@ -291,11 +291,13 @@ class EmailEndpoint extends Endpoint
             $headers['Idempotency-Key'] = $this->idempotencyKey;
         }
 
-        $result = $this->postArray('/v1/send', $payload ?? $this->payload, $headers);
+        try {
+            $result = $this->postArray('/v1/send', $payload ?? $this->payload, $headers);
 
-        $this->payload = [];
-        $this->idempotencyKey = null;
-
-        return $this->hydrate(SendMailResponse::class, $result);
+            return $this->hydrate(SendMailResponse::class, $result);
+        } finally {
+            $this->payload = [];
+            $this->idempotencyKey = null;
+        }
     }
 }

@@ -357,6 +357,56 @@ test('it handles idempotency key', function () {
     expect($response->toArray())->toBe(['message_id' => '123', 'status' => 'pending']);
 });
 
+test('it resets builder state after failed send', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['first@example.com'],
+            'subject' => 'First',
+            'attachments' => [[
+                'filename' => 'secret.pdf',
+                'content' => 'base64secret',
+            ]],
+            'metadata' => ['invoice' => '123'],
+            'headers' => ['X-Secret' => 'keep-out'],
+        ], ['Idempotency-Key' => 'first-key'])
+        ->andThrow(new RuntimeException('API unavailable'));
+
+    try {
+        $this->endpoint
+            ->from('sender@example.com')
+            ->to('first@example.com')
+            ->subject('First')
+            ->attach('secret.pdf', 'base64secret')
+            ->metadata(['invoice' => '123'])
+            ->headers(['X-Secret' => 'keep-out'])
+            ->idempotencyKey('first-key')
+            ->send();
+
+        throw new RuntimeException('Expected send to fail.');
+    } catch (RuntimeException $exception) {
+        expect($exception->getMessage())->toBe('API unavailable');
+    }
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['second@example.com'],
+            'subject' => 'Second',
+        ], [])
+        ->andReturn(['message_id' => '456', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('second@example.com')
+        ->subject('Second')
+        ->send();
+});
+
 test('it sends without idempotency key when not set', function () {
     $this->httpClient
         ->shouldReceive('post')
