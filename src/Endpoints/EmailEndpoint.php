@@ -2,11 +2,12 @@
 
 namespace Lettermint\Endpoints;
 
+use Lettermint\Responses\SendBatchMailResponse;
+use Lettermint\Responses\SendMailResponse;
+
 /**
  * @phpstan-import-type SendMailRequest from \Lettermint\Types\ApiTypes
  * @phpstan-import-type SendBatchMailRequest from \Lettermint\Types\ApiTypes
- * @phpstan-import-type SendMailResponse from \Lettermint\Types\ApiTypes
- * @phpstan-import-type SendBatchMailResponse from \Lettermint\Types\ApiTypes
  *
  * @phpstan-type AttachmentPayload array{
  *     filename: string,
@@ -33,10 +34,6 @@ namespace Lettermint\Endpoints;
  *     tag?: string|null,
  *     settings?: EmailSettings|null,
  *     headers?: array<string, string>
- * }
- * @phpstan-type SendResponse array{
- *     message_id: string,
- *     status: string
  * }
  */
 class EmailEndpoint extends Endpoint
@@ -272,13 +269,11 @@ class EmailEndpoint extends Endpoint
      *
      * @phpstan-param SendBatchMailRequest $messages
      *
-     * @phpstan-return SendBatchMailResponse
-     *
      * @throws \Exception On HTTP or API failure.
      */
-    public function sendBatch(array $messages): array
+    public function sendBatch(array $messages): SendBatchMailResponse
     {
-        return $this->postArray('/v1/send/batch', $messages, []);
+        return $this->hydrateList(SendBatchMailResponse::class, $this->postArray('/v1/send/batch', $messages, []));
     }
 
     /**
@@ -286,11 +281,9 @@ class EmailEndpoint extends Endpoint
      *
      * @phpstan-param SendMailRequest|null $payload
      *
-     * @phpstan-return SendMailResponse
-     *
      * @throws \Exception On HTTP or API failure.
      */
-    public function send(?array $payload = null): array
+    public function send(?array $payload = null): SendMailResponse
     {
         $headers = [];
 
@@ -303,6 +296,6 @@ class EmailEndpoint extends Endpoint
         $this->payload = [];
         $this->idempotencyKey = null;
 
-        return $result;
+        return $this->hydrate(SendMailResponse::class, $result);
     }
 }

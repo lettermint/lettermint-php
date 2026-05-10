@@ -16,20 +16,20 @@ test('it lists messages', function () {
     $query = ['filter[status]' => 'delivered'];
     $this->httpClient->shouldReceive('get')->once()->with('/v1/messages', $query)->andReturn(['data' => []]);
 
-    expect($this->endpoint->list($query))->toBe(['data' => []]);
+    expect($this->endpoint->list($query)->toArray())->toBe(['data' => []]);
 });
 
 test('it retrieves messages', function () {
     $this->httpClient->shouldReceive('get')->once()->with('/v1/messages/message-id', [])->andReturn(['data' => ['id' => 'message-id']]);
 
-    expect($this->endpoint->retrieve('message-id'))->toBe(['data' => ['id' => 'message-id']]);
+    expect($this->endpoint->retrieve('message-id')->toArray())->toBe(['data' => ['id' => 'message-id']]);
 });
 
 test('it retrieves message events', function () {
     $query = ['include_machine_events' => true];
     $this->httpClient->shouldReceive('get')->once()->with('/v1/messages/message-id/events', $query)->andReturn(['data' => []]);
 
-    expect($this->endpoint->events('message-id', $query))->toBe(['data' => []]);
+    expect($this->endpoint->events('message-id', $query)->toArray())->toBe(['data' => []]);
 });
 
 test('it retrieves message source', function () {

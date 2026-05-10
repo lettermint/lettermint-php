@@ -2,9 +2,18 @@
 
 namespace Lettermint\Endpoints;
 
+use Lettermint\Responses\CreateProjectResponse;
+use Lettermint\Responses\CreateRouteResponse;
+use Lettermint\Responses\DeleteProjectResponse;
+use Lettermint\Responses\ProjectListResponse;
+use Lettermint\Responses\ProjectMemberResponse;
+use Lettermint\Responses\ProjectResponse;
+use Lettermint\Responses\ProjectRoutesResponse;
+use Lettermint\Responses\RotateProjectTokenResponse;
+use Lettermint\Responses\UpdateProjectMembersResponse;
+use Lettermint\Responses\UpdateProjectResponse;
+
 /**
- * @phpstan-import-type CursorPage from \Lettermint\Types\ApiTypes
- * @phpstan-import-type ApiObject from \Lettermint\Types\ApiTypes
  * @phpstan-import-type StoreProjectData from \Lettermint\Types\ApiTypes
  * @phpstan-import-type UpdateProjectData from \Lettermint\Types\ApiTypes
  * @phpstan-import-type UpdateProjectMembersData from \Lettermint\Types\ApiTypes
@@ -12,91 +21,76 @@ namespace Lettermint\Endpoints;
  */
 class ProjectsEndpoint extends Endpoint
 {
-    /** @phpstan-return CursorPage */
-    public function list(array $query = []): array
+    public function list(array $query = []): ProjectListResponse
     {
-        return $this->getArray($this->path('/projects'), $query);
+        return $this->hydrate(ProjectListResponse::class, $this->getArray($this->path('/projects'), $query));
     }
 
     /**
      * @phpstan-param StoreProjectData $data
-     *
-     * @phpstan-return ApiObject
      */
-    public function create(array $data): array
+    public function create(array $data): CreateProjectResponse
     {
-        return $this->postArray($this->path('/projects'), $data, []);
+        return $this->hydrate(CreateProjectResponse::class, $this->postArray($this->path('/projects'), $data, []));
     }
 
-    /** @phpstan-return ApiObject */
-    public function retrieve(string $projectId, array $query = []): array
+    public function retrieve(string $projectId, array $query = []): ProjectResponse
     {
-        return $this->getArray($this->path('/projects/{projectId}', ['projectId' => $projectId]), $query);
+        return $this->hydrate(ProjectResponse::class, $this->getArray($this->path('/projects/{projectId}', ['projectId' => $projectId]), $query));
     }
 
     /**
      * @phpstan-param UpdateProjectData $data
-     *
-     * @phpstan-return ApiObject
      */
-    public function update(string $projectId, array $data): array
+    public function update(string $projectId, array $data): UpdateProjectResponse
     {
-        return $this->putArray($this->path('/projects/{projectId}', ['projectId' => $projectId]), $data, []);
+        return $this->hydrate(UpdateProjectResponse::class, $this->putArray($this->path('/projects/{projectId}', ['projectId' => $projectId]), $data, []));
     }
 
-    /** @phpstan-return ApiObject */
-    public function delete(string $projectId): array
+    public function delete(string $projectId): DeleteProjectResponse
     {
-        return $this->deleteArray($this->path('/projects/{projectId}', ['projectId' => $projectId]), []);
+        return $this->hydrate(DeleteProjectResponse::class, $this->deleteArray($this->path('/projects/{projectId}', ['projectId' => $projectId]), []));
     }
 
-    /** @phpstan-return ApiObject */
-    public function rotateToken(string $projectId): array
+    public function rotateToken(string $projectId): RotateProjectTokenResponse
     {
-        return $this->postArray($this->path('/projects/{projectId}/rotate-token', ['projectId' => $projectId]), [], []);
+        return $this->hydrate(RotateProjectTokenResponse::class, $this->postArray($this->path('/projects/{projectId}/rotate-token', ['projectId' => $projectId]), [], []));
     }
 
     /**
      * @phpstan-param UpdateProjectMembersData $data
-     *
-     * @phpstan-return ApiObject
      */
-    public function updateMembers(string $projectId, array $data): array
+    public function updateMembers(string $projectId, array $data): UpdateProjectMembersResponse
     {
-        return $this->putArray($this->path('/projects/{projectId}/members', ['projectId' => $projectId]), $data, []);
+        return $this->hydrate(UpdateProjectMembersResponse::class, $this->putArray($this->path('/projects/{projectId}/members', ['projectId' => $projectId]), $data, []));
     }
 
-    /** @phpstan-return ApiObject */
-    public function addMember(string $projectId, string $teamMemberId): array
+    public function addMember(string $projectId, string $teamMemberId): ProjectMemberResponse
     {
-        return $this->postArray($this->path('/projects/{projectId}/members/{teamMemberId}', [
+        return $this->hydrate(ProjectMemberResponse::class, $this->postArray($this->path('/projects/{projectId}/members/{teamMemberId}', [
             'projectId' => $projectId,
             'teamMemberId' => $teamMemberId,
-        ]), [], []);
+        ]), [], []));
     }
 
-    /** @phpstan-return ApiObject */
-    public function removeMember(string $projectId, string $teamMemberId): array
+    public function removeMember(string $projectId, string $teamMemberId): ProjectMemberResponse
     {
-        return $this->deleteArray($this->path('/projects/{projectId}/members/{teamMemberId}', [
+        return $this->hydrate(ProjectMemberResponse::class, $this->deleteArray($this->path('/projects/{projectId}/members/{teamMemberId}', [
             'projectId' => $projectId,
             'teamMemberId' => $teamMemberId,
-        ]), []);
+        ]), []));
     }
 
-    /** @phpstan-return CursorPage */
-    public function routes(string $projectId, array $query = []): array
+    public function routes(string $projectId, array $query = []): ProjectRoutesResponse
     {
-        return $this->getArray($this->path('/projects/{projectId}/routes', ['projectId' => $projectId]), $query);
+        return $this->hydrate(ProjectRoutesResponse::class, $this->getArray($this->path('/projects/{projectId}/routes', ['projectId' => $projectId]), $query));
     }
 
     /**
      * @phpstan-param StoreRouteData $data
-     *
-     * @phpstan-return ApiObject
      */
-    public function createRoute(string $projectId, array $data): array
+    public function createRoute(string $projectId, array $data): CreateRouteResponse
     {
-        return $this->postArray($this->path('/projects/{projectId}/routes', ['projectId' => $projectId]), $data, []);
+        return $this->hydrate(CreateRouteResponse::class, $this->postArray($this->path('/projects/{projectId}/routes', ['projectId' => $projectId]), $data, []));
     }
 }

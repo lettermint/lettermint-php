@@ -3,6 +3,7 @@
 namespace Lettermint\Endpoints;
 
 use Lettermint\Client\HttpClient;
+use Lettermint\Resource;
 
 abstract class Endpoint
 {
@@ -101,5 +102,32 @@ abstract class Endpoint
         }
 
         return $response;
+    }
+
+    /**
+     * @template T of Resource
+     *
+     * @param  class-string<T>  $class
+     * @param  array<array-key, mixed>  $response
+     * @return T
+     */
+    protected function hydrate(string $class, array $response): Resource
+    {
+        /** @var T $resource */
+        $resource = new $class($response);
+
+        return $resource;
+    }
+
+    /**
+     * @template T of Resource
+     *
+     * @param  class-string<T>  $class
+     * @param  array<array-key, mixed>  $response
+     * @return T
+     */
+    protected function hydrateList(string $class, array $response): Resource
+    {
+        return $this->hydrate($class, array_is_list($response) ? ['data' => $response] : $response);
     }
 }

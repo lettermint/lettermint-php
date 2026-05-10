@@ -5,8 +5,8 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
-use Lettermint\Client\SendingClient;
-use Lettermint\Client\TeamClient;
+use Lettermint\Client\ApiClient;
+use Lettermint\Lettermint;
 
 function replaceWrappedGuzzleClient(object $sdkClient, array &$container): void
 {
@@ -30,9 +30,9 @@ function replaceWrappedGuzzleClient(object $sdkClient, array &$container): void
     $guzzleProperty->setValue($httpClient, $guzzle);
 }
 
-test('sending client sends only sending auth', function () {
+test('email builder sends only sending auth', function () {
     $container = [];
-    $client = new SendingClient('sending-secret', 'http://api.example.com');
+    $client = Lettermint::email('sending-secret', 'http://api.example.com');
     replaceWrappedGuzzleClient($client, $container);
 
     $client->ping();
@@ -41,9 +41,9 @@ test('sending client sends only sending auth', function () {
     expect($container[0]['request']->hasHeader('Authorization'))->toBeFalse();
 });
 
-test('team client sends only bearer auth', function () {
+test('api client sends only bearer auth', function () {
     $container = [];
-    $client = new TeamClient('team-secret', 'http://api.example.com');
+    $client = new ApiClient('team-secret', 'http://api.example.com');
     replaceWrappedGuzzleClient($client, $container);
 
     $client->ping();

@@ -1,7 +1,7 @@
 <?php
 
+use Lettermint\Client\ApiClient;
 use Lettermint\Client\HttpClient;
-use Lettermint\Client\TeamClient;
 use Lettermint\Endpoints\DomainsEndpoint;
 use Lettermint\Endpoints\MessagesEndpoint;
 use Lettermint\Endpoints\ProjectsEndpoint;
@@ -11,8 +11,8 @@ use Lettermint\Endpoints\SuppressionsEndpoint;
 use Lettermint\Endpoints\TeamEndpoint;
 use Lettermint\Endpoints\WebhooksEndpoint;
 
-test('it exposes team endpoints', function () {
-    $client = new TeamClient('team-token', 'http://api.example.com');
+test('it exposes api endpoints', function () {
+    $client = new ApiClient('api-token', 'http://api.example.com');
 
     expect($client->domains)->toBeInstanceOf(DomainsEndpoint::class);
     expect($client->messages)->toBeInstanceOf(MessagesEndpoint::class);
@@ -25,13 +25,13 @@ test('it exposes team endpoints', function () {
 });
 
 test('it reuses endpoint instances', function () {
-    $client = new TeamClient('team-token', 'http://api.example.com');
+    $client = new ApiClient('api-token', 'http://api.example.com');
 
     expect($client->projects)->toBe($client->projects);
 });
 
 test('it owns an http client', function () {
-    $client = new TeamClient('team-token', 'http://api.example.com');
+    $client = new ApiClient('api-token', 'http://api.example.com');
     $reflection = new ReflectionClass($client);
     $property = $reflection->getProperty('httpClient');
     $property->setAccessible(true);
@@ -39,8 +39,8 @@ test('it owns an http client', function () {
     expect($property->getValue($client))->toBeInstanceOf(HttpClient::class);
 });
 
-test('it pings the team API as a scalar status code', function () {
-    $client = new TeamClient('team-token', 'http://api.example.com');
+test('it pings the API as a scalar status code', function () {
+    $client = new ApiClient('api-token', 'http://api.example.com');
     $reflection = new ReflectionClass($client);
     $property = $reflection->getProperty('httpClient');
     $property->setAccessible(true);

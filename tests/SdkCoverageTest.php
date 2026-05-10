@@ -1,7 +1,6 @@
 <?php
 
-use Lettermint\Client\SendingClient;
-use Lettermint\Client\TeamClient;
+use Lettermint\Client\ApiClient;
 use Lettermint\Endpoints\DomainsEndpoint;
 use Lettermint\Endpoints\EmailEndpoint;
 use Lettermint\Endpoints\MessagesEndpoint;
@@ -16,7 +15,7 @@ test('it exposes every documented api operation', function () {
     $operations = [
         ['sending', 'v1.sendMail', EmailEndpoint::class, 'send'],
         ['sending', 'v1.sendBatchMail', EmailEndpoint::class, 'sendBatch'],
-        ['sending', 'v1.ping', SendingClient::class, 'ping'],
+        ['sending', 'v1.ping', EmailEndpoint::class, 'ping'],
         ['team', 'domain.index', DomainsEndpoint::class, 'list'],
         ['team', 'domain.store', DomainsEndpoint::class, 'create'],
         ['team', 'domain.show', DomainsEndpoint::class, 'retrieve'],
@@ -24,7 +23,7 @@ test('it exposes every documented api operation', function () {
         ['team', 'domain.verifyDnsRecords', DomainsEndpoint::class, 'verifyDnsRecords'],
         ['team', 'domain.verifySpecificDnsRecord', DomainsEndpoint::class, 'verifyDnsRecord'],
         ['team', 'domain.updateProjects', DomainsEndpoint::class, 'updateProjects'],
-        ['team', 'v1.ping', TeamClient::class, 'ping'],
+        ['team', 'v1.ping', ApiClient::class, 'ping'],
         ['team', 'message.index', MessagesEndpoint::class, 'list'],
         ['team', 'message.show', MessagesEndpoint::class, 'retrieve'],
         ['team', 'message.events', MessagesEndpoint::class, 'events'],
@@ -76,4 +75,103 @@ test('it exposes every documented api operation', function () {
     }
 
     expect($missing)->toBe([]);
+});
+
+test('it uses concrete response classes for every documented endpoint response', function () {
+    $typesSource = file_get_contents(__DIR__.'/../src/Types/ApiTypes.php');
+
+    $endpointFiles = [
+        __DIR__.'/../src/Endpoints/EmailEndpoint.php',
+        __DIR__.'/../src/Endpoints/DomainsEndpoint.php',
+        __DIR__.'/../src/Endpoints/MessagesEndpoint.php',
+        __DIR__.'/../src/Endpoints/ProjectsEndpoint.php',
+        __DIR__.'/../src/Endpoints/RoutesEndpoint.php',
+        __DIR__.'/../src/Endpoints/StatsEndpoint.php',
+        __DIR__.'/../src/Endpoints/SuppressionsEndpoint.php',
+        __DIR__.'/../src/Endpoints/TeamEndpoint.php',
+        __DIR__.'/../src/Endpoints/WebhooksEndpoint.php',
+    ];
+
+    $endpointSource = implode("\n", array_map(fn (string $file): string => file_get_contents($file), $endpointFiles));
+
+    $expectedTypes = [
+        'SendMailResponse',
+        'SendBatchMailResponse',
+        'DomainListResponse',
+        'DomainResponse',
+        'DeleteDomainResponse',
+        'VerifyDnsRecordsResponse',
+        'VerifyDnsRecordResponse',
+        'UpdateDomainProjectsResponse',
+        'MessageListResponse',
+        'MessageResponse',
+        'MessageEventsResponse',
+        'ProjectListResponse',
+        'CreateProjectResponse',
+        'ProjectResponse',
+        'UpdateProjectResponse',
+        'DeleteProjectResponse',
+        'RotateProjectTokenResponse',
+        'UpdateProjectMembersResponse',
+        'ProjectMemberResponse',
+        'ProjectRoutesResponse',
+        'CreateRouteResponse',
+        'RouteResponse',
+        'UpdateRouteResponse',
+        'DeleteRouteResponse',
+        'VerifyInboundDomainResponse',
+        'StatsResponse',
+        'SuppressionListResponse',
+        'CreateSuppressionResponse',
+        'DeleteSuppressionResponse',
+        'TeamResponse',
+        'UpdateTeamResponse',
+        'TeamUsageResponse',
+        'TeamMembersResponse',
+        'WebhookListResponse',
+        'CreateWebhookResponse',
+        'WebhookResponse',
+        'UpdateWebhookResponse',
+        'DeleteWebhookResponse',
+        'TestWebhookResponse',
+        'RegenerateWebhookSecretResponse',
+        'WebhookDeliveriesResponse',
+        'WebhookDeliveryResponse',
+    ];
+
+    foreach ($expectedTypes as $type) {
+        $responseSource = file_get_contents(__DIR__."/../src/Responses/{$type}.php");
+
+        expect($typesSource)->toContain("@phpstan-type {$type}");
+        expect($responseSource)->toBeString()
+            ->toContain('extends Resource')
+            ->toContain('@property');
+        expect($endpointSource)->toContain(": {$type}");
+    }
+
+    expect($endpointSource)->not->toContain('@phpstan-return ApiObject');
+    expect($endpointSource)->not->toContain('@phpstan-return CursorPage');
+    expect($endpointSource)->not->toContain('@phpstan-type SendResponse');
+});
+
+test('paginated php response types include concrete data item shapes', function () {
+    $typesSource = file_get_contents(__DIR__.'/../src/Types/ApiTypes.php');
+
+    $expectedDataTypes = [
+        'DomainListResponse' => 'DomainListData',
+        'MessageListResponse' => 'MessageListData',
+        'MessageEventsResponse' => 'MessageEventData',
+        'ProjectListResponse' => 'ProjectListData',
+        'ProjectRoutesResponse' => 'RouteListData',
+        'SuppressionListResponse' => 'SuppressedRecipientData',
+        'TeamMembersResponse' => 'TeamMemberData',
+        'WebhookListResponse' => 'WebhookListData',
+        'WebhookDeliveriesResponse' => 'WebhookDeliveryListData',
+    ];
+
+    foreach ($expectedDataTypes as $responseType => $dataType) {
+        expect($typesSource)->toContain("@phpstan-type {$responseType} array{");
+        expect($typesSource)->toContain("data: list<{$dataType}>");
+        expect($typesSource)->not->toContain("@phpstan-type {$responseType} CursorPage");
+    }
 });

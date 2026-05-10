@@ -29,14 +29,14 @@ Initialize the Lettermint client with your Sending API token:
 $lettermint = new Lettermint\Lettermint('your-api-token');
 ```
 
-For new integrations, prefer the explicit Sending and Team clients:
+For new integrations, prefer explicit clients for the two API surfaces:
 
 ```php
-$sending = Lettermint\Lettermint::sending(getenv('LETTERMINT_SENDING_TOKEN'));
-$team = Lettermint\Lettermint::team(getenv('LETTERMINT_TEAM_TOKEN'));
+$email = Lettermint\Lettermint::email(getenv('LETTERMINT_SENDING_TOKEN'));
+$api = Lettermint\Lettermint::api(getenv('LETTERMINT_API_TOKEN'));
 ```
 
-Sending API tokens are project-specific and authenticate with the `x-lettermint-token` header. Team API tokens are team-scoped and authenticate with `Authorization: Bearer ...`. Keep these tokens separate and never reuse a Team token for sending-only workloads.
+Sending API tokens are project-specific and authenticate with the `x-lettermint-token` header. API tokens are team-scoped and authenticate with `Authorization: Bearer ...`. Keep these tokens separate and never reuse an API token for sending-only workloads.
 
 ### Sending Emails
 
@@ -75,7 +75,7 @@ $lettermint->email
 You can also send with an array payload:
 
 ```php
-$response = $sending->email->send([
+$response = $email->send([
     'from' => 'sender@example.com',
     'to' => ['recipient@example.com'],
     'subject' => 'Hello from Lettermint!',
@@ -86,7 +86,7 @@ $response = $sending->email->send([
 ### Batch Sending
 
 ```php
-$response = $sending->email->sendBatch([
+$response = $email->sendBatch([
     [
         'from' => 'sender@example.com',
         'to' => ['recipient@example.com'],
@@ -135,34 +135,34 @@ same request with the same idempotency key, the API will return the same respons
 
 For more information, refer to the [documentation](https://docs.lettermint.co/platform/emails/idempotency).
 
-### Team API
+### API Client
 
-Use the Team API client for team-scoped resources such as projects, domains, routes, suppressions, stats, messages, and webhooks:
+Use the API client for team-scoped resources such as projects, domains, routes, suppressions, stats, messages, and webhooks:
 
 ```php
-$team = Lettermint\Lettermint::team(getenv('LETTERMINT_TEAM_TOKEN'));
+$api = Lettermint\Lettermint::api(getenv('LETTERMINT_API_TOKEN'));
 
-$projects = $team->projects->list(['filter[search]' => 'production']);
+$projects = $api->projects->list(['filter[search]' => 'production']);
 
-$project = $team->projects->create([
+$project = $api->projects->create([
     'name' => 'Production',
     'smtp_enabled' => false,
 ]);
 
-$team->domains->verifyDnsRecords('domain-id');
+$api->domains->verifyDnsRecords('domain-id');
 
-$stats = $team->stats->retrieve([
+$stats = $api->stats->retrieve([
     'from' => '2026-05-01',
     'to' => '2026-05-09',
 ]);
 
-$team->suppressions->create([
+$api->suppressions->create([
     'email' => 'user@example.com',
     'reason' => 'manual',
     'scope' => 'team',
 ]);
 
-$team->webhooks->create([
+$api->webhooks->create([
     'route_id' => 'route-id',
     'name' => 'Production webhook',
     'url' => 'https://example.com/lettermint/webhook',
@@ -170,11 +170,11 @@ $team->webhooks->create([
 ]);
 ```
 
-Both clients support `ping()`:
+Both API surfaces support `ping()`:
 
 ```php
-$sending->ping();
-$team->ping();
+$email->ping();
+$api->ping();
 ```
 
 ## Testing

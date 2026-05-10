@@ -22,7 +22,7 @@ use Lettermint\Endpoints\WebhooksEndpoint;
  * @property-read TeamEndpoint $team Access team operations.
  * @property-read WebhooksEndpoint $webhooks Access webhook operations.
  */
-class TeamClient
+class ApiClient
 {
     private HttpClient $httpClient;
 

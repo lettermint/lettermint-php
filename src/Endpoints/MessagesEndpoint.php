@@ -2,28 +2,25 @@
 
 namespace Lettermint\Endpoints;
 
-/**
- * @phpstan-import-type CursorPage from \Lettermint\Types\ApiTypes
- * @phpstan-import-type ApiObject from \Lettermint\Types\ApiTypes
- */
+use Lettermint\Responses\MessageEventsResponse;
+use Lettermint\Responses\MessageListResponse;
+use Lettermint\Responses\MessageResponse;
+
 class MessagesEndpoint extends Endpoint
 {
-    /** @phpstan-return CursorPage|list<ApiObject> */
-    public function list(array $query = []): array
+    public function list(array $query = []): MessageListResponse
     {
-        return $this->getArray($this->path('/messages'), $query);
+        return $this->hydrateList(MessageListResponse::class, $this->getArray($this->path('/messages'), $query));
     }
 
-    /** @phpstan-return ApiObject */
-    public function retrieve(string $messageId): array
+    public function retrieve(string $messageId): MessageResponse
     {
-        return $this->getArray($this->path('/messages/{messageId}', ['messageId' => $messageId]), []);
+        return $this->hydrate(MessageResponse::class, $this->getArray($this->path('/messages/{messageId}', ['messageId' => $messageId]), []));
     }
 
-    /** @phpstan-return ApiObject */
-    public function events(string $messageId, array $query = []): array
+    public function events(string $messageId, array $query = []): MessageEventsResponse
     {
-        return $this->getArray($this->path('/messages/{messageId}/events', ['messageId' => $messageId]), $query);
+        return $this->hydrate(MessageEventsResponse::class, $this->getArray($this->path('/messages/{messageId}/events', ['messageId' => $messageId]), $query));
     }
 
     public function source(string $messageId): string

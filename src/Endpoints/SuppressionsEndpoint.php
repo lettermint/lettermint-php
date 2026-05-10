@@ -2,32 +2,30 @@
 
 namespace Lettermint\Endpoints;
 
+use Lettermint\Responses\CreateSuppressionResponse;
+use Lettermint\Responses\DeleteSuppressionResponse;
+use Lettermint\Responses\SuppressionListResponse;
+
 /**
- * @phpstan-import-type CursorPage from \Lettermint\Types\ApiTypes
- * @phpstan-import-type ApiObject from \Lettermint\Types\ApiTypes
  * @phpstan-import-type StoreSuppressionData from \Lettermint\Types\ApiTypes
  */
 class SuppressionsEndpoint extends Endpoint
 {
-    /** @phpstan-return CursorPage */
-    public function list(array $query = []): array
+    public function list(array $query = []): SuppressionListResponse
     {
-        return $this->getArray($this->path('/suppressions'), $query);
+        return $this->hydrate(SuppressionListResponse::class, $this->getArray($this->path('/suppressions'), $query));
     }
 
     /**
      * @phpstan-param StoreSuppressionData $data
-     *
-     * @phpstan-return ApiObject
      */
-    public function create(array $data): array
+    public function create(array $data): CreateSuppressionResponse
     {
-        return $this->postArray($this->path('/suppressions'), $data, []);
+        return $this->hydrate(CreateSuppressionResponse::class, $this->postArray($this->path('/suppressions'), $data, []));
     }
 
-    /** @phpstan-return ApiObject */
-    public function delete(string $suppressionId): array
+    public function delete(string $suppressionId): DeleteSuppressionResponse
     {
-        return $this->deleteArray($this->path('/suppressions/{suppressionId}', ['suppressionId' => $suppressionId]), []);
+        return $this->hydrate(DeleteSuppressionResponse::class, $this->deleteArray($this->path('/suppressions/{suppressionId}', ['suppressionId' => $suppressionId]), []));
     }
 }

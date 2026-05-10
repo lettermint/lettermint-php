@@ -2,6 +2,8 @@
 
 use Lettermint\Client\HttpClient;
 use Lettermint\Endpoints\EmailEndpoint;
+use Lettermint\Responses\SendBatchMailResponse;
+use Lettermint\Responses\SendMailResponse;
 
 beforeEach(function () {
     $this->httpClient = Mockery::mock(HttpClient::class);
@@ -12,21 +14,20 @@ afterEach(function () {
     Mockery::close();
 });
 
-test('it documents the send response shape', function () {
+test('it exposes typed send response classes', function () {
     $classReflection = new ReflectionClass(EmailEndpoint::class);
     $classDocComment = $classReflection->getDocComment();
     $methodReflection = new ReflectionMethod(EmailEndpoint::class, 'send');
-    $methodDocComment = $methodReflection->getDocComment();
+    $batchMethodReflection = new ReflectionMethod(EmailEndpoint::class, 'sendBatch');
 
     expect($classDocComment)
         ->toBeString()
-        ->toContain('@phpstan-type SendResponse')
-        ->toContain('message_id: string')
-        ->toContain('status: string');
+        ->toContain('@phpstan-import-type SendMailRequest')
+        ->toContain('@phpstan-import-type SendBatchMailRequest')
+        ->not->toContain('@phpstan-type SendResponse');
 
-    expect($methodDocComment)
-        ->toBeString()
-        ->toContain('@phpstan-return SendMailResponse');
+    expect($methodReflection->getReturnType()?->getName())->toBe(SendMailResponse::class);
+    expect($batchMethodReflection->getReturnType()?->getName())->toBe(SendBatchMailResponse::class);
 });
 
 test('it builds email with basic required fields', function () {
@@ -46,7 +47,7 @@ test('it builds email with basic required fields', function () {
         ->subject('Test Subject')
         ->send();
 
-    expect($response)->toBe(['message_id' => '123', 'status' => 'pending']);
+    expect($response->toArray())->toBe(['message_id' => '123', 'status' => 'pending']);
 });
 
 test('it supports multiple recipients', function () {
@@ -218,7 +219,7 @@ test('it sends direct array payloads', function () {
 
     $response = $this->endpoint->send($payload);
 
-    expect($response)->toBe(['message_id' => '123', 'status' => 'pending']);
+    expect($response->toArray())->toBe(['message_id' => '123', 'status' => 'pending']);
 });
 
 test('it sends batch payloads', function () {
@@ -238,7 +239,7 @@ test('it sends batch payloads', function () {
 
     $response = $this->endpoint->sendBatch($messages);
 
-    expect($response)->toBe(['data' => [['message_id' => '123', 'status' => 'pending']]]);
+    expect($response->toArray())->toBe(['data' => [['message_id' => '123', 'status' => 'pending']]]);
 });
 
 test('it pings the sending API', function () {
@@ -353,7 +354,7 @@ test('it handles idempotency key', function () {
         ->idempotencyKey('unique-key-123')
         ->send();
 
-    expect($response)->toBe(['message_id' => '123', 'status' => 'pending']);
+    expect($response->toArray())->toBe(['message_id' => '123', 'status' => 'pending']);
 });
 
 test('it sends without idempotency key when not set', function () {
