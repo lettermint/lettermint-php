@@ -39,14 +39,14 @@ test('it owns an http client', function () {
     expect($property->getValue($client))->toBeInstanceOf(HttpClient::class);
 });
 
-test('it pings the API as a scalar status code', function () {
+test('it pings the API as a raw pong response', function () {
     $client = new ApiClient('api-token', 'http://api.example.com');
     $reflection = new ReflectionClass($client);
     $property = $reflection->getProperty('httpClient');
     $property->setAccessible(true);
     $httpClient = Mockery::mock(HttpClient::class);
-    $httpClient->shouldReceive('get')->once()->with('/v1/ping')->andReturn(200);
+    $httpClient->shouldReceive('getRaw')->once()->with('/v1/ping')->andReturn(' pong');
     $property->setValue($client, $httpClient);
 
-    expect($client->ping())->toBe(200);
+    expect($client->ping())->toBe('pong');
 });

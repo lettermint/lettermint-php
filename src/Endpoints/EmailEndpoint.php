@@ -259,9 +259,9 @@ class EmailEndpoint extends Endpoint
      *
      * @throws \Exception On HTTP or API failure.
      */
-    public function ping(): int
+    public function ping(): string
     {
-        return $this->getInt('/v1/ping');
+        return trim($this->getRaw('/v1/ping'));
     }
 
     /**

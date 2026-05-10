@@ -244,12 +244,12 @@ test('it sends batch payloads', function () {
 
 test('it pings the sending API', function () {
     $this->httpClient
-        ->shouldReceive('get')
+        ->shouldReceive('getRaw')
         ->once()
         ->with('/v1/ping', [])
-        ->andReturn(200);
+        ->andReturn(' pong');
 
-    expect($this->endpoint->ping())->toBe(200);
+    expect($this->endpoint->ping())->toBe('pong');
 });
 
 test('it handles per email settings', function () {

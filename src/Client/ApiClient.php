@@ -63,14 +63,8 @@ class ApiClient
         throw new \InvalidArgumentException("Unknown endpoint: $name");
     }
 
-    public function ping(): int
+    public function ping(): string
     {
-        $response = $this->httpClient->get('/v1/ping');
-
-        if (! is_int($response)) {
-            throw new \UnexpectedValueException('Expected API response to be an integer.');
-        }
-
-        return $response;
+        return trim($this->httpClient->getRaw('/v1/ping'));
     }
 }
