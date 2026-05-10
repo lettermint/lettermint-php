@@ -23,11 +23,20 @@ composer require lettermint/lettermint-php
 
 ## Usage
 
-Initialize the Lettermint client with your API token:
+Initialize the Lettermint client with your Sending API token:
 
 ```php
 $lettermint = new Lettermint\Lettermint('your-api-token');
 ```
+
+For new integrations, prefer explicit clients for the two API surfaces:
+
+```php
+$email = Lettermint\Lettermint::email(getenv('LETTERMINT_SENDING_TOKEN'));
+$api = Lettermint\Lettermint::api(getenv('LETTERMINT_API_TOKEN'));
+```
+
+Sending API tokens are project-specific and authenticate with the `x-lettermint-token` header. API tokens are team-scoped and authenticate with `Authorization: Bearer ...`. Keep these tokens separate and never reuse an API token for sending-only workloads.
 
 ### Sending Emails
 
@@ -63,6 +72,36 @@ $lettermint->email
     ->send();
 ```
 
+You can also send with an array payload:
+
+```php
+$response = $email->send([
+    'from' => 'sender@example.com',
+    'to' => ['recipient@example.com'],
+    'subject' => 'Hello from Lettermint!',
+    'text' => 'Hello! This is a test email.',
+]);
+```
+
+### Batch Sending
+
+```php
+$response = $email->sendBatch([
+    [
+        'from' => 'sender@example.com',
+        'to' => ['recipient@example.com'],
+        'subject' => 'First email',
+        'text' => 'Hello!',
+    ],
+    [
+        'from' => 'sender@example.com',
+        'to' => ['another@example.com'],
+        'subject' => 'Second email',
+        'text' => 'Hello again!',
+    ],
+]);
+```
+
 #### Inline Attachments
 
 You can embed images and other content in your HTML emails using content IDs:
@@ -96,6 +135,48 @@ same request with the same idempotency key, the API will return the same respons
 
 For more information, refer to the [documentation](https://docs.lettermint.co/platform/emails/idempotency).
 
+### API Client
+
+Use the API client for team-scoped resources such as projects, domains, routes, suppressions, stats, messages, and webhooks:
+
+```php
+$api = Lettermint\Lettermint::api(getenv('LETTERMINT_API_TOKEN'));
+
+$projects = $api->projects->list(['filter[search]' => 'production']);
+
+$project = $api->projects->create([
+    'name' => 'Production',
+    'smtp_enabled' => false,
+]);
+
+$api->domains->verifyDnsRecords('domain-id');
+
+$stats = $api->stats->retrieve([
+    'from' => '2026-05-01',
+    'to' => '2026-05-09',
+]);
+
+$api->suppressions->create([
+    'email' => 'user@example.com',
+    'reason' => 'manual',
+    'scope' => 'team',
+]);
+
+$api->webhooks->create([
+    'route_id' => 'route-id',
+    'name' => 'Production webhook',
+    'url' => 'https://example.com/lettermint/webhook',
+    'events' => ['message.sent', 'message.delivered'],
+]);
+```
+
+Both API surfaces support `ping()`:
+
+```php
+$email->ping();
+$api->ping();
+```
+
 ## Testing
 
 ```bash
@@ -105,6 +186,10 @@ composer test
 ## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+
+## Upgrading
+
+Please see [UPGRADE.md](UPGRADE.md) for guidance on upgrading from v1 to v2.
 
 ## Contributing
 

@@ -2,6 +2,8 @@
 
 use Lettermint\Client\HttpClient;
 use Lettermint\Endpoints\EmailEndpoint;
+use Lettermint\Responses\SendBatchMailResponse;
+use Lettermint\Responses\SendMailResponse;
 
 beforeEach(function () {
     $this->httpClient = Mockery::mock(HttpClient::class);
@@ -12,21 +14,20 @@ afterEach(function () {
     Mockery::close();
 });
 
-test('it documents the send response shape', function () {
+test('it exposes typed send response classes', function () {
     $classReflection = new ReflectionClass(EmailEndpoint::class);
     $classDocComment = $classReflection->getDocComment();
     $methodReflection = new ReflectionMethod(EmailEndpoint::class, 'send');
-    $methodDocComment = $methodReflection->getDocComment();
+    $batchMethodReflection = new ReflectionMethod(EmailEndpoint::class, 'sendBatch');
 
     expect($classDocComment)
         ->toBeString()
-        ->toContain('@phpstan-type SendResponse')
-        ->toContain('message_id: string')
-        ->toContain('status: string');
+        ->toContain('@phpstan-import-type SendMailRequest')
+        ->toContain('@phpstan-import-type SendBatchMailRequest')
+        ->not->toContain('@phpstan-type SendResponse');
 
-    expect($methodDocComment)
-        ->toBeString()
-        ->toContain('@phpstan-return SendResponse');
+    expect($methodReflection->getReturnType()?->getName())->toBe(SendMailResponse::class);
+    expect($batchMethodReflection->getReturnType()?->getName())->toBe(SendBatchMailResponse::class);
 });
 
 test('it builds email with basic required fields', function () {
@@ -46,7 +47,7 @@ test('it builds email with basic required fields', function () {
         ->subject('Test Subject')
         ->send();
 
-    expect($response)->toBe(['message_id' => '123', 'status' => 'pending']);
+    expect($response->toArray())->toBe(['message_id' => '123', 'status' => 'pending']);
 });
 
 test('it supports multiple recipients', function () {
@@ -202,6 +203,101 @@ test('it handles attachments with content_id', function () {
         ->send();
 });
 
+test('it sends direct array payloads', function () {
+    $payload = [
+        'from' => 'sender@example.com',
+        'to' => ['recipient@example.com'],
+        'subject' => 'Test Subject',
+        'text' => 'Plain text content',
+    ];
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', $payload, [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $response = $this->endpoint->send($payload);
+
+    expect($response->toArray())->toBe(['message_id' => '123', 'status' => 'pending']);
+});
+
+test('it sends batch payloads', function () {
+    $messages = [
+        [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+        ],
+    ];
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send/batch', $messages, [])
+        ->andReturn(['data' => [['message_id' => '123', 'status' => 'pending']]]);
+
+    $response = $this->endpoint->sendBatch($messages);
+
+    expect($response->toArray())->toBe(['data' => [['message_id' => '123', 'status' => 'pending']]]);
+});
+
+test('it pings the sending API', function () {
+    $this->httpClient
+        ->shouldReceive('getRaw')
+        ->once()
+        ->with('/v1/ping', [])
+        ->andReturn(' pong');
+
+    expect($this->endpoint->ping())->toBe('pong');
+});
+
+test('it handles per email settings', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+            'settings' => ['track_opens' => false, 'track_clicks' => true],
+        ], [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->settings(['track_opens' => false, 'track_clicks' => true])
+        ->send();
+});
+
+test('it handles attachment content type', function () {
+    $attachment = [
+        'filename' => 'invite.ics',
+        'content' => 'base64encodedcalendar',
+        'content_type' => 'text/calendar; method=REQUEST',
+    ];
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+            'attachments' => [$attachment],
+        ], [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->attach('invite.ics', 'base64encodedcalendar', null, 'text/calendar; method=REQUEST')
+        ->send();
+});
+
 test('it handles custom headers', function () {
     $this->httpClient
         ->shouldReceive('post')
@@ -258,7 +354,57 @@ test('it handles idempotency key', function () {
         ->idempotencyKey('unique-key-123')
         ->send();
 
-    expect($response)->toBe(['message_id' => '123', 'status' => 'pending']);
+    expect($response->toArray())->toBe(['message_id' => '123', 'status' => 'pending']);
+});
+
+test('it resets builder state after failed send', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['first@example.com'],
+            'subject' => 'First',
+            'attachments' => [[
+                'filename' => 'secret.pdf',
+                'content' => 'base64secret',
+            ]],
+            'metadata' => ['invoice' => '123'],
+            'headers' => ['X-Secret' => 'keep-out'],
+        ], ['Idempotency-Key' => 'first-key'])
+        ->andThrow(new RuntimeException('API unavailable'));
+
+    try {
+        $this->endpoint
+            ->from('sender@example.com')
+            ->to('first@example.com')
+            ->subject('First')
+            ->attach('secret.pdf', 'base64secret')
+            ->metadata(['invoice' => '123'])
+            ->headers(['X-Secret' => 'keep-out'])
+            ->idempotencyKey('first-key')
+            ->send();
+
+        throw new RuntimeException('Expected send to fail.');
+    } catch (RuntimeException $exception) {
+        expect($exception->getMessage())->toBe('API unavailable');
+    }
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['second@example.com'],
+            'subject' => 'Second',
+        ], [])
+        ->andReturn(['message_id' => '456', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('second@example.com')
+        ->subject('Second')
+        ->send();
 });
 
 test('it sends without idempotency key when not set', function () {

@@ -46,7 +46,7 @@
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
-        "format": "php-cs-fixer fix"
+        "format": "pint"
     },
     "config": {
         "sort-packages": true,

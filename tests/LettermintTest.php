@@ -1,8 +1,9 @@
 <?php
 
-use Lettermint\Lettermint;
+use Lettermint\Client\ApiClient;
 use Lettermint\Client\HttpClient;
 use Lettermint\Endpoints\EmailEndpoint;
+use Lettermint\Lettermint;
 
 beforeEach(function () {
     $this->apiToken = 'test-token';
@@ -45,4 +46,12 @@ test('it uses default base url when none provided', function () {
     $property->setAccessible(true);
 
     expect($property->getValue($client))->toBe('https://api.lettermint.co/v1');
+});
+
+test('it creates an api client', function () {
+    expect(Lettermint::api('api-token', $this->baseUrl))->toBeInstanceOf(ApiClient::class);
+});
+
+test('it creates a direct email sending builder', function () {
+    expect(Lettermint::email($this->apiToken, $this->baseUrl))->toBeInstanceOf(EmailEndpoint::class);
 });

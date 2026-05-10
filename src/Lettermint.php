@@ -2,6 +2,8 @@
 
 namespace Lettermint;
 
+use Lettermint\Client\ApiClient;
+use Lettermint\Client\Auth\SendingApiTokenAuth;
 use Lettermint\Client\HttpClient;
 use Lettermint\Endpoints\EmailEndpoint;
 
@@ -27,6 +29,19 @@ class Lettermint
         $this->apiToken = $apiToken;
         $this->baseUrl = $baseUrl ?? 'https://api.lettermint.co/v1';
         $this->httpClient = new HttpClient($this->apiToken, $this->baseUrl);
+    }
+
+    public static function api(string $apiToken, ?string $baseUrl = null): ApiClient
+    {
+        return new ApiClient($apiToken, $baseUrl);
+    }
+
+    public static function email(string $apiToken, ?string $baseUrl = null): EmailEndpoint
+    {
+        return new EmailEndpoint(new HttpClient(
+            new SendingApiTokenAuth($apiToken),
+            $baseUrl ?? 'https://api.lettermint.co/v1'
+        ));
     }
 
     public function __get($name)
