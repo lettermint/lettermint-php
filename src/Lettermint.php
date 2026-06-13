@@ -24,23 +24,24 @@ class Lettermint
         'email' => EmailEndpoint::class,
     ];
 
-    public function __construct(string $apiToken, ?string $baseUrl = null)
+    public function __construct(string $apiToken, ?string $baseUrl = null, int $timeout = 15)
     {
         $this->apiToken = $apiToken;
         $this->baseUrl = $baseUrl ?? 'https://api.lettermint.co/v1';
-        $this->httpClient = new HttpClient($this->apiToken, $this->baseUrl);
+        $this->httpClient = new HttpClient($this->apiToken, $this->baseUrl, $timeout);
     }
 
-    public static function api(string $apiToken, ?string $baseUrl = null): ApiClient
+    public static function api(string $apiToken, ?string $baseUrl = null, int $timeout = 15): ApiClient
     {
-        return new ApiClient($apiToken, $baseUrl);
+        return new ApiClient($apiToken, $baseUrl, $timeout);
     }
 
-    public static function email(string $apiToken, ?string $baseUrl = null): EmailEndpoint
+    public static function email(string $apiToken, ?string $baseUrl = null, int $timeout = 15): EmailEndpoint
     {
         return new EmailEndpoint(new HttpClient(
             new SendingApiTokenAuth($apiToken),
-            $baseUrl ?? 'https://api.lettermint.co/v1'
+            $baseUrl ?? 'https://api.lettermint.co/v1',
+            $timeout
         ));
     }
 

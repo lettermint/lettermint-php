@@ -21,13 +21,13 @@ class HttpClient
 
     private Client $client;
 
-    public function __construct(AuthStrategy|string $auth, string $baseUrl)
+    public function __construct(AuthStrategy|string $auth, string $baseUrl, int $timeout = 15)
     {
         $this->auth = is_string($auth) ? new SendingApiTokenAuth($auth) : $auth;
         $this->baseUrl = rtrim($baseUrl, '/');
         $this->client = new Client([
             'base_uri' => $this->baseUrl,
-            'timeout' => 15,
+            'timeout' => $timeout,
             'headers' => [
                 'Content-Type' => 'application/json',
                 ...$this->auth->headers(),

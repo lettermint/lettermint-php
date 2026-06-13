@@ -39,11 +39,12 @@ class ApiClient
         'webhooks' => WebhooksEndpoint::class,
     ];
 
-    public function __construct(string $apiToken, ?string $baseUrl = null)
+    public function __construct(string $apiToken, ?string $baseUrl = null, int $timeout = 15)
     {
         $this->httpClient = new HttpClient(
             new TeamBearerTokenAuth($apiToken),
-            $baseUrl ?? 'https://api.lettermint.co/v1'
+            $baseUrl ?? 'https://api.lettermint.co/v1',
+            $timeout
         );
     }
 

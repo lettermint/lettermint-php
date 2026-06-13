@@ -165,3 +165,30 @@ test('it trims trailing slashes from base url', function () {
 
     expect($property->getValue($client))->toBe('http://api.example.com');
 });
+
+test('it defaults to a 15 second timeout', function () {
+    $client = new HttpClient($this->apiToken, $this->baseUrl);
+
+    expect(guzzleTimeout($client))->toBe(15);
+});
+
+test('it uses a custom timeout when provided', function () {
+    $client = new HttpClient($this->apiToken, $this->baseUrl, 60);
+
+    expect(guzzleTimeout($client))->toBe(60);
+});
+
+/**
+ * Read the Guzzle client's configured timeout out of a HttpClient instance.
+ */
+function guzzleTimeout(HttpClient $httpClient): int
+{
+    $clientProperty = (new ReflectionClass($httpClient))->getProperty('client');
+    $clientProperty->setAccessible(true);
+    $guzzle = $clientProperty->getValue($httpClient);
+
+    $configProperty = (new ReflectionClass($guzzle))->getProperty('config');
+    $configProperty->setAccessible(true);
+
+    return $configProperty->getValue($guzzle)['timeout'];
+}
