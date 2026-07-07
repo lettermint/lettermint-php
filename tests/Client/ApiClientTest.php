@@ -10,6 +10,7 @@ use Lettermint\Endpoints\StatsEndpoint;
 use Lettermint\Endpoints\SuppressionsEndpoint;
 use Lettermint\Endpoints\TeamEndpoint;
 use Lettermint\Endpoints\WebhooksEndpoint;
+use Lettermint\Responses\BlockedFileTypesResponse;
 
 test('it exposes api endpoints', function () {
     $client = new ApiClient('api-token', 'http://api.example.com');
@@ -49,4 +50,23 @@ test('it pings the API as a raw pong response', function () {
     $property->setValue($client, $httpClient);
 
     expect($client->ping())->toBe('pong');
+});
+
+test('it lists blocked file types', function () {
+    $client = new ApiClient('api-token', 'http://api.example.com');
+    $reflection = new ReflectionClass($client);
+    $property = $reflection->getProperty('httpClient');
+    $property->setAccessible(true);
+    $httpClient = Mockery::mock(HttpClient::class);
+    $httpClient->shouldReceive('get')
+        ->once()
+        ->with('/v1/blocked-file-types')
+        ->andReturn(['extensions' => ['exe'], 'mime_types' => ['application/x-msdownload']]);
+    $property->setValue($client, $httpClient);
+
+    $response = $client->blockedFileTypes();
+
+    expect($response)->toBeInstanceOf(BlockedFileTypesResponse::class)
+        ->and($response->extensions)->toBe(['exe'])
+        ->and($response->mime_types)->toBe(['application/x-msdownload']);
 });

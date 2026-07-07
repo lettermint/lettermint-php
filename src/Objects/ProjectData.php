@@ -8,6 +8,7 @@ use Lettermint\Resource;
  * @property string $id
  * @property string $name
  * @property bool $smtp_enabled
+ * @property bool $redact_email_content
  * @property string|null $default_route_id
  * @property string|null $token_generated_at
  * @property string|null $token_last_used_at
