@@ -24,6 +24,7 @@ test('it exposes every documented api operation', function () {
         ['team', 'domain.verifySpecificDnsRecord', DomainsEndpoint::class, 'verifyDnsRecord'],
         ['team', 'domain.updateProjects', DomainsEndpoint::class, 'updateProjects'],
         ['team', 'v1.ping', ApiClient::class, 'ping'],
+        ['team', 'v1.blockedFileTypes', ApiClient::class, 'blockedFileTypes'],
         ['team', 'message.index', MessagesEndpoint::class, 'list'],
         ['team', 'message.show', MessagesEndpoint::class, 'retrieve'],
         ['team', 'message.events', MessagesEndpoint::class, 'events'],
@@ -64,7 +65,7 @@ test('it exposes every documented api operation', function () {
         ['team', 'webhook.showDelivery', WebhooksEndpoint::class, 'delivery'],
     ];
 
-    expect($operations)->toHaveCount(49);
+    expect($operations)->toHaveCount(50);
 
     $missing = [];
 
@@ -81,6 +82,7 @@ test('it uses concrete response classes for every documented endpoint response',
     $typesSource = file_get_contents(__DIR__.'/../src/Types/ApiTypes.php');
 
     $endpointFiles = [
+        __DIR__.'/../src/Client/ApiClient.php',
         __DIR__.'/../src/Endpoints/EmailEndpoint.php',
         __DIR__.'/../src/Endpoints/DomainsEndpoint.php',
         __DIR__.'/../src/Endpoints/MessagesEndpoint.php',
@@ -97,6 +99,7 @@ test('it uses concrete response classes for every documented endpoint response',
     $expectedTypes = [
         'SendMailResponse',
         'SendBatchMailResponse',
+        'BlockedFileTypesResponse',
         'DomainListResponse',
         'DomainResponse',
         'DeleteDomainResponse',
@@ -174,4 +177,21 @@ test('paginated php response types include concrete data item shapes', function 
         expect($typesSource)->toContain("data: list<{$dataType}>");
         expect($typesSource)->not->toContain("@phpstan-type {$responseType} CursorPage");
     }
+});
+
+test('generated php api types include current team schema additions', function () {
+    $typesSource = file_get_contents(__DIR__.'/../src/Types/ApiTypes.php');
+
+    expect($typesSource)
+        ->toContain("'auto_replied'")
+        ->toContain("'message.auto_replied'")
+        ->toContain('redact_email_content: bool')
+        ->toContain('redact_email_content?: bool|null')
+        ->toContain('@phpstan-type UpdateRouteSettingsData array{')
+        ->toContain('@phpstan-type UpdateRouteInboundSettingsData array{')
+        ->toContain('disable_plaintext_generation?: bool|null')
+        ->toContain('short_token?: bool')
+        ->toContain('@phpstan-type BlockedFileTypesResponse array{extensions: list<string>, mime_types: list<string>}')
+        ->toContain('300000')
+        ->toContain("scope: SuppressionScope");
 });

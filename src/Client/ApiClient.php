@@ -11,6 +11,7 @@ use Lettermint\Endpoints\StatsEndpoint;
 use Lettermint\Endpoints\SuppressionsEndpoint;
 use Lettermint\Endpoints\TeamEndpoint;
 use Lettermint\Endpoints\WebhooksEndpoint;
+use Lettermint\Responses\BlockedFileTypesResponse;
 
 /**
  * @property-read DomainsEndpoint $domains Access domain operations.
@@ -67,5 +68,16 @@ class ApiClient
     public function ping(): string
     {
         return trim($this->httpClient->getRaw('/v1/ping'));
+    }
+
+    public function blockedFileTypes(): BlockedFileTypesResponse
+    {
+        $response = $this->httpClient->get('/v1/blocked-file-types');
+
+        if (! is_array($response)) {
+            throw new \UnexpectedValueException('Expected API response to be an array.');
+        }
+
+        return new BlockedFileTypesResponse($response);
     }
 }

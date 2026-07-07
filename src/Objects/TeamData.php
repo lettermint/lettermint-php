@@ -9,7 +9,7 @@ use Lettermint\Resource;
  * @property string $name
  * @property 'personal'|'business' $type
  * @property 'free'|'starter'|'growth'|'pro' $plan
- * @property 300|10000|50000|125000|500000|750000|1000000|1500000 $tier
+ * @property 300|10000|50000|125000|300000|500000|750000|1000000|1500000 $tier
  * @property string|null $verified_at
  * @property list<string> $features
  * @property list<\Lettermint\Objects\TeamAddonData> $addons
