@@ -10,7 +10,7 @@ use Lettermint\Resource;
  * @property string $url
  * @property bool|null $enabled
  * @property bool|null $include_machine_events
- * @property list<'message.created'|'message.sent'|'message.delivered'|'message.auto_replied'|'message.hard_bounced'|'message.soft_bounced'|'message.spam_complaint'|'message.failed'|'message.suppressed'|'message.unsubscribed'|'message.opened'|'message.clicked'|'message.inbound'|'message.policy_rejected'|'webhook.test'> $events
+ * @property list<'message.created'|'message.sent'|'message.delivered'|'message.auto_replied'|'message.hard_bounced'|'message.soft_bounced'|'message.spam_complaint'|'message.failed'|'message.suppressed'|'message.unsubscribed'|'message.opened'|'message.clicked'|'message.inbound'|'message.policy_rejected'|'suppression.added'|'suppression.removed'|'webhook.test'> $events
  */
 final class StoreWebhookData extends Resource
 {

@@ -32,9 +32,31 @@ test('it retrieves team usage', function () {
     expect($this->endpoint->usage()->toArray())->toBe(['data' => []]);
 });
 
+test('it retrieves reusable team roles', function () {
+    $this->httpClient->shouldReceive('get')->once()->with('/v1/team/roles', [])->andReturn(['data' => []]);
+
+    expect($this->endpoint->roles()->toArray())->toBe(['data' => []]);
+});
+
 test('it retrieves team members', function () {
     $query = ['page[size]' => 10];
     $this->httpClient->shouldReceive('get')->once()->with('/v1/team/members', $query)->andReturn(['data' => []]);
 
     expect($this->endpoint->members($query)->toArray())->toBe(['data' => []]);
+});
+
+test('it retrieves a team member', function () {
+    $this->httpClient->shouldReceive('get')->once()->with('/v1/team/members/user%2Fid', [])->andReturn(['id' => 'user/id']);
+
+    expect($this->endpoint->member('user/id')->toArray())->toBe(['id' => 'user/id']);
+});
+
+test('it updates a team member assignment', function () {
+    $data = [
+        'role_id' => 'role-id',
+        'project_access' => ['scope' => 'all'],
+    ];
+    $this->httpClient->shouldReceive('put')->once()->with('/v1/team/members/user%2Fid/assignment', $data, [])->andReturn(['id' => 'user/id']);
+
+    expect($this->endpoint->updateMemberAssignment('user/id', $data)->toArray())->toBe(['id' => 'user/id']);
 });

@@ -6,17 +6,14 @@ use Lettermint\Responses\CreateProjectResponse;
 use Lettermint\Responses\CreateRouteResponse;
 use Lettermint\Responses\DeleteProjectResponse;
 use Lettermint\Responses\ProjectListResponse;
-use Lettermint\Responses\ProjectMemberResponse;
 use Lettermint\Responses\ProjectResponse;
 use Lettermint\Responses\ProjectRoutesResponse;
 use Lettermint\Responses\RotateProjectTokenResponse;
-use Lettermint\Responses\UpdateProjectMembersResponse;
 use Lettermint\Responses\UpdateProjectResponse;
 
 /**
  * @phpstan-import-type StoreProjectData from \Lettermint\Types\ApiTypes
  * @phpstan-import-type UpdateProjectData from \Lettermint\Types\ApiTypes
- * @phpstan-import-type UpdateProjectMembersData from \Lettermint\Types\ApiTypes
  * @phpstan-import-type StoreRouteData from \Lettermint\Types\ApiTypes
  */
 class ProjectsEndpoint extends Endpoint
@@ -55,30 +52,6 @@ class ProjectsEndpoint extends Endpoint
     public function rotateToken(string $projectId): RotateProjectTokenResponse
     {
         return $this->hydrate(RotateProjectTokenResponse::class, $this->postArray($this->path('/projects/{projectId}/rotate-token', ['projectId' => $projectId]), [], []));
-    }
-
-    /**
-     * @phpstan-param UpdateProjectMembersData $data
-     */
-    public function updateMembers(string $projectId, array $data): UpdateProjectMembersResponse
-    {
-        return $this->hydrate(UpdateProjectMembersResponse::class, $this->putArray($this->path('/projects/{projectId}/members', ['projectId' => $projectId]), $data, []));
-    }
-
-    public function addMember(string $projectId, string $teamMemberId): ProjectMemberResponse
-    {
-        return $this->hydrate(ProjectMemberResponse::class, $this->postArray($this->path('/projects/{projectId}/members/{teamMemberId}', [
-            'projectId' => $projectId,
-            'teamMemberId' => $teamMemberId,
-        ]), [], []));
-    }
-
-    public function removeMember(string $projectId, string $teamMemberId): ProjectMemberResponse
-    {
-        return $this->hydrate(ProjectMemberResponse::class, $this->deleteArray($this->path('/projects/{projectId}/members/{teamMemberId}', [
-            'projectId' => $projectId,
-            'teamMemberId' => $teamMemberId,
-        ]), []));
     }
 
     public function routes(string $projectId, array $query = []): ProjectRoutesResponse

@@ -12,10 +12,13 @@ use Lettermint\Resource;
  * @property 'global'|'team'|'project'|'route' $scope
  * @property string|null $project_id
  * @property string|null $route_id
+ * @property SuppressionSourceMessageData|null $source_message
  * @property string $created_at
  * @property string $updated_at
  */
 final class SuppressedRecipientData extends Resource
 {
-    //
+    protected static array $casts = [
+        'source_message' => SuppressionSourceMessageData::class,
+    ];
 }

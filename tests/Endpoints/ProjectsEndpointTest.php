@@ -52,25 +52,6 @@ test('it rotates project tokens', function () {
     expect($this->endpoint->rotateToken('project-id')->toArray())->toBe(['token' => 'new-token']);
 });
 
-test('it updates project members', function () {
-    $data = ['members' => ['member-id']];
-    $this->httpClient->shouldReceive('put')->once()->with('/v1/projects/project-id/members', $data, [])->andReturn(['data' => []]);
-
-    expect($this->endpoint->updateMembers('project-id', $data)->toArray())->toBe(['data' => []]);
-});
-
-test('it adds project members', function () {
-    $this->httpClient->shouldReceive('post')->once()->with('/v1/projects/project-id/members/member-id', [], [])->andReturn(['data' => []]);
-
-    expect($this->endpoint->addMember('project-id', 'member-id')->toArray())->toBe(['data' => []]);
-});
-
-test('it removes project members', function () {
-    $this->httpClient->shouldReceive('delete')->once()->with('/v1/projects/project-id/members/member-id', [])->andReturn(['data' => []]);
-
-    expect($this->endpoint->removeMember('project-id', 'member-id')->toArray())->toBe(['data' => []]);
-});
-
 test('it lists project routes', function () {
     $query = ['filter[route_type]' => 'outbound'];
     $this->httpClient->shouldReceive('get')->once()->with('/v1/projects/project-id/routes', $query)->andReturn(['data' => []]);
