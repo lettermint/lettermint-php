@@ -8,6 +8,7 @@ use Lettermint\Resource;
  * @property string $id
  * @property string $domain
  * @property 'verified'|'partially_verified'|'pending_verification'|'failed_verification' $status
+ * @property 'legacy_txt'|'managed_cname' $dkim_mode
  * @property string|null $status_changed_at
  * @property string $created_at
  */

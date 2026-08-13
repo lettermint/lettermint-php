@@ -1,7 +1,8 @@
 <?php
 
-namespace Lettermint\Objects;
+namespace Lettermint\Responses;
 
+use Lettermint\Objects\TeamMemberProjectAccessData;
 use Lettermint\Resource;
 
 /**
@@ -12,7 +13,7 @@ use Lettermint\Resource;
  * @property TeamMemberProjectAccessData $project_access
  * @property string|null $joined_at
  */
-final class TeamMemberData extends Resource
+final class TeamMembersShowResponse extends Resource
 {
     protected static array $casts = [
         'project_access' => TeamMemberProjectAccessData::class,

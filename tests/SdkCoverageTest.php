@@ -37,9 +37,6 @@ test('it exposes every documented api operation', function () {
         ['team', 'project.update', ProjectsEndpoint::class, 'update'],
         ['team', 'project.destroy', ProjectsEndpoint::class, 'delete'],
         ['team', 'project.rotateToken', ProjectsEndpoint::class, 'rotateToken'],
-        ['team', 'project.updateMembers', ProjectsEndpoint::class, 'updateMembers'],
-        ['team', 'project.addMember', ProjectsEndpoint::class, 'addMember'],
-        ['team', 'project.removeMember', ProjectsEndpoint::class, 'removeMember'],
         ['team', 'route.index', ProjectsEndpoint::class, 'routes'],
         ['team', 'route.store', ProjectsEndpoint::class, 'createRoute'],
         ['team', 'route.show', RoutesEndpoint::class, 'retrieve'],
@@ -53,7 +50,10 @@ test('it exposes every documented api operation', function () {
         ['team', 'team.show', TeamEndpoint::class, 'retrieve'],
         ['team', 'team.update', TeamEndpoint::class, 'update'],
         ['team', 'team.usage', TeamEndpoint::class, 'usage'],
+        ['team', 'team.roles', TeamEndpoint::class, 'roles'],
         ['team', 'team.members', TeamEndpoint::class, 'members'],
+        ['team', 'team.members.show', TeamEndpoint::class, 'member'],
+        ['team', 'team.members.assignment.update', TeamEndpoint::class, 'updateMemberAssignment'],
         ['team', 'webhook.index', WebhooksEndpoint::class, 'list'],
         ['team', 'webhook.store', WebhooksEndpoint::class, 'create'],
         ['team', 'webhook.show', WebhooksEndpoint::class, 'retrieve'],
@@ -115,8 +115,6 @@ test('it uses concrete response classes for every documented endpoint response',
         'UpdateProjectResponse',
         'DeleteProjectResponse',
         'RotateProjectTokenResponse',
-        'UpdateProjectMembersResponse',
-        'ProjectMemberResponse',
         'ProjectRoutesResponse',
         'CreateRouteResponse',
         'RouteResponse',
@@ -130,7 +128,10 @@ test('it uses concrete response classes for every documented endpoint response',
         'TeamResponse',
         'UpdateTeamResponse',
         'TeamUsageResponse',
+        'TeamRolesResponse',
         'TeamMembersResponse',
+        'TeamMembersShowResponse',
+        'TeamMembersAssignmentUpdateResponse',
         'WebhookListResponse',
         'CreateWebhookResponse',
         'WebhookResponse',
@@ -189,9 +190,16 @@ test('generated php api types include current team schema additions', function (
         ->toContain('redact_email_content?: bool|null')
         ->toContain('@phpstan-type UpdateRouteSettingsData array{')
         ->toContain('@phpstan-type UpdateRouteInboundSettingsData array{')
-        ->toContain('disable_plaintext_generation?: bool|null')
+        ->toContain('generate_plaintext_fallback?: bool|null')
+        ->toContain('tls?: TlsPolicy|null')
         ->toContain('short_token?: bool')
         ->toContain('@phpstan-type BlockedFileTypesResponse array{extensions: list<string>, mime_types: list<string>}')
-        ->toContain('300000')
-        ->toContain("scope: SuppressionScope");
+        ->toContain('@phpstan-type BuiltInTeamRole')
+        ->toContain('@phpstan-type TeamRoleData array{')
+        ->toContain('included_volume: int')
+        ->toContain('@phpstan-type UpdateTeamMemberAssignmentData array{')
+        ->toContain('dkim_mode: DkimMode')
+        ->toContain('source_message?: SuppressionSourceMessageData|null')
+        ->toContain('spam_score?: float|int|null')
+        ->toContain('scope: SuppressionScope');
 });

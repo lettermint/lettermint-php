@@ -13,6 +13,9 @@ use Lettermint\Resource;
  * @property int $hard_bounce_count
  * @property int $spam_complaint_count
  * @property int $inbound_received_count
+ * @property int|null $observed_opened_count
+ * @property int|null $human_opened_count
+ * @property int|null $privacy_opened_count
  * @property int|null $effective_opened_count
  * @property int|null $machine_opened_count
  * @property int|null $machine_clicked_count
