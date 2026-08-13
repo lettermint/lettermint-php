@@ -260,7 +260,7 @@ test('it handles per email settings', function () {
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
-            'settings' => ['track_opens' => false, 'track_clicks' => true],
+            'settings' => ['track_opens' => false, 'track_clicks' => true, 'tls' => 'enforced'],
         ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
@@ -268,7 +268,7 @@ test('it handles per email settings', function () {
         ->from('sender@example.com')
         ->to('recipient@example.com')
         ->subject('Test Subject')
-        ->settings(['track_opens' => false, 'track_clicks' => true])
+        ->settings(['track_opens' => false, 'track_clicks' => true, 'tls' => 'enforced'])
         ->send();
 });
 
@@ -299,6 +299,11 @@ test('it handles attachment content type', function () {
 });
 
 test('it handles custom headers', function () {
+    $headers = [
+        'Message-ID' => '<ticket-123@example.com>',
+        'X-LM-Preserve-Message-ID' => 'true',
+    ];
+
     $this->httpClient
         ->shouldReceive('post')
         ->once()
@@ -306,7 +311,7 @@ test('it handles custom headers', function () {
             'from' => 'sender@example.com',
             'to' => ['recipient@example.com'],
             'subject' => 'Test Subject',
-            'headers' => ['X-Custom' => 'Value'],
+            'headers' => $headers,
         ], [])
         ->andReturn(['message_id' => '123', 'status' => 'pending']);
 
@@ -314,8 +319,34 @@ test('it handles custom headers', function () {
         ->from('sender@example.com')
         ->to('recipient@example.com')
         ->subject('Test Subject')
-        ->headers(['X-Custom' => 'Value'])
+        ->headers($headers)
         ->send();
+});
+
+test('it sends and resets the batch idempotency key', function () {
+    $messages = [[
+        'from' => 'sender@example.com',
+        'to' => ['recipient@example.com'],
+        'subject' => 'Test Subject',
+    ]];
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send/batch', $messages, ['Idempotency-Key' => 'batch-key'])
+        ->andReturn([['message_id' => '123', 'status' => 'pending']]);
+
+    $this->endpoint
+        ->idempotencyKey('batch-key')
+        ->sendBatch($messages);
+
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send/batch', $messages, [])
+        ->andReturn([['message_id' => '456', 'status' => 'pending']]);
+
+    $this->endpoint->sendBatch($messages);
 });
 
 test('it supports RFC 5322 email addresses', function () {

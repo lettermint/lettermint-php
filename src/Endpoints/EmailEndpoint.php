@@ -17,7 +17,8 @@ use Lettermint\Responses\SendMailResponse;
  * }
  * @phpstan-type EmailSettings array{
  *     track_opens?: bool,
- *     track_clicks?: bool
+ *     track_clicks?: bool,
+ *     tls?: 'opportunistic'|'enforced'
  * }
  * @phpstan-type EmailPayload array{
  *     from?: string,
@@ -273,7 +274,18 @@ class EmailEndpoint extends Endpoint
      */
     public function sendBatch(array $messages): SendBatchMailResponse
     {
-        return $this->hydrateList(SendBatchMailResponse::class, $this->postArray('/v1/send/batch', $messages, []));
+        $headers = [];
+
+        if ($this->idempotencyKey !== null) {
+            $headers['Idempotency-Key'] = $this->idempotencyKey;
+        }
+
+        try {
+            return $this->hydrateList(SendBatchMailResponse::class, $this->postArray('/v1/send/batch', $messages, $headers));
+        } finally {
+            $this->payload = [];
+            $this->idempotencyKey = null;
+        }
     }
 
     /**
