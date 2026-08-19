@@ -33,6 +33,7 @@ use Lettermint\Responses\SendMailResponse;
  *     route?: string,
  *     metadata?: array<string, string>,
  *     tag?: string|null,
+ *     tags?: list<array{name: string, value: string}>,
  *     settings?: EmailSettings|null,
  *     headers?: array<string, string>
  * }
@@ -239,6 +240,18 @@ class EmailEndpoint extends Endpoint
     public function tag(?string $tag): self
     {
         $this->payload['tag'] = $tag;
+
+        return $this;
+    }
+
+    /**
+     * Set reusable name-value tags for the email.
+     *
+     * @param  list<array{name: string, value: string}>  $tags
+     */
+    public function tags(array $tags): self
+    {
+        $this->payload['tags'] = $tags;
 
         return $this;
     }
