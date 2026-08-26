@@ -7,8 +7,8 @@ namespace Lettermint\Types;
  *
  * @phpstan-type ApiObject array<string, mixed>
  * @phpstan-type CursorPage array{data: list<ApiObject>, path: string|null, per_page: int, next_cursor: string|null, next_page_url: string|null, prev_cursor: string|null, prev_page_url: string|null}
- * @phpstan-type MessageStatus 'pending'|'queued'|'suppressed'|'processed'|'delivered'|'opened'|'clicked'|'soft_bounced'|'hard_bounced'|'spam_complaint'|'failed'|'blocked'|'policy_rejected'|'unsubscribed'
- * @phpstan-type SendMailRequest array{route?: string, from: string, to: non-empty-list<string>, cc?: list<string>, bcc?: list<string>, reply_to?: list<string>, subject: string, headers?: array<string, string>, metadata?: array<string, string>, tag?: string|null, tags?: list<array{name: string, value: string}>, settings?: array{track_opens?: bool, track_clicks?: bool, tls?: TlsPolicy}|null, html?: string|null, text?: string|null, attachments?: list<array{filename: string, content: string, content_type?: string|null, content_id?: string|null}>}
+ * @phpstan-type MessageStatus 'scheduled'|'pending'|'queued'|'suppressed'|'processed'|'delivered'|'opened'|'clicked'|'soft_bounced'|'hard_bounced'|'spam_complaint'|'failed'|'blocked'|'policy_rejected'|'unsubscribed'|'canceled'
+ * @phpstan-type SendMailRequest array{route?: string, from: string, to: non-empty-list<string>, cc?: list<string>, bcc?: list<string>, reply_to?: list<string>, subject: string, scheduled_at?: string, headers?: array<string, string>, metadata?: array<string, string>, tag?: string|null, tags?: list<array{name: string, value: string}>, settings?: array{track_opens?: bool, track_clicks?: bool, tls?: TlsPolicy}|null, html?: string|null, text?: string|null, attachments?: list<array{filename: string, content: string, content_type?: string|null, content_id?: string|null}>}
  * @phpstan-type SendBatchMailRequest list<SendMailRequest>
  * @phpstan-type TlsPolicy 'opportunistic'|'enforced'
  * @phpstan-type AttachmentDelivery 'inline'|'url'
@@ -24,10 +24,10 @@ namespace Lettermint\Types;
  * @phpstan-type DomainStatus 'verified'|'partially_verified'|'pending_verification'|'failed_verification'
  * @phpstan-type InitialRoutes 'both'|'transactional'|'broadcast'
  * @phpstan-type MessageAttachmentData array{size: int, filename: string, content_id: string|null, content_type: string}
- * @phpstan-type MessageData array{id: string, type: MessageType, status: MessageStatus, status_changed_at: string|null, tag: string|null, tags: list<array{name: string, value: string}>, from_email: string, from_name: string|null, reply_to: list<string>|null, subject: string|null, to: list<MessageRecipientData>|null, cc: list<MessageRecipientData>|null, bcc: list<MessageRecipientData>|null, attachments: list<MessageAttachmentData>|null, metadata: array<string, string>|null, spam_score?: float|int|null, spam_symbols?: list<SpamSymbol>, route_id: string, created_at: string}
+ * @phpstan-type MessageData array{id: string, type: MessageType, status: MessageStatus, status_changed_at: string|null, scheduled_at: string|null, tag: string|null, tags: list<array{name: string, value: string}>, from_email: string, from_name: string|null, reply_to: list<string>|null, subject: string|null, to: list<MessageRecipientData>|null, cc: list<MessageRecipientData>|null, bcc: list<MessageRecipientData>|null, attachments: list<MessageAttachmentData>|null, metadata: array<string, string>|null, spam_score?: float|int|null, spam_symbols?: list<SpamSymbol>, route_id: string, created_at: string}
  * @phpstan-type MessageEventData array{message_id: string, event: MessageEventType, tag: string|null, tags: list<array{name: string, value: string}>, metadata: array<string, mixed>|null, timestamp: string}
- * @phpstan-type MessageEventType 'queued'|'processed'|'suppressed'|'delivered'|'auto_replied'|'soft_bounced'|'hard_bounced'|'spam_complaint'|'failed'|'blocked'|'policy_rejected'|'unsubscribed'|'opened'|'clicked'|'inbound_received'|'inbound_queued'|'inbound_spam_blocked'|'inbound_processed'|'inbound_retry'
- * @phpstan-type MessageListData array{id: string, type: MessageType, status: MessageStatus, spam_score?: float|int|null, from_email: string, from_name: string|null, subject: string|null, to: list<MessageRecipientData>|null, cc: list<MessageRecipientData>|null, bcc: list<MessageRecipientData>|null, reply_to: list<string>|null, tag: string|null, tags: list<array{name: string, value: string}>, status_changed_at: string|null, created_at: string}
+ * @phpstan-type MessageEventType 'scheduled'|'rescheduled'|'canceled'|'released'|'queued'|'processed'|'suppressed'|'delivered'|'auto_replied'|'soft_bounced'|'hard_bounced'|'spam_complaint'|'failed'|'blocked'|'policy_rejected'|'unsubscribed'|'opened'|'clicked'|'inbound_received'|'inbound_queued'|'inbound_spam_blocked'|'inbound_processed'|'inbound_retry'
+ * @phpstan-type MessageListData array{id: string, type: MessageType, status: MessageStatus, scheduled_at: string|null, spam_score?: float|int|null, from_email: string, from_name: string|null, subject: string|null, to: list<MessageRecipientData>|null, cc: list<MessageRecipientData>|null, bcc: list<MessageRecipientData>|null, reply_to: list<string>|null, tag: string|null, tags: list<array{name: string, value: string}>, status_changed_at: string|null, created_at: string}
  * @phpstan-type MessageRecipientData array{email: string, name: string|null}
  * @phpstan-type MessageStatsData array{messages_transactional: int, messages_broadcast: int, messages_inbound: int, deliverability: float|int}
  * @phpstan-type MessageType 'inbound'|'outbound'
@@ -82,8 +82,10 @@ namespace Lettermint\Types;
  * @phpstan-type WebhookEvent 'message.created'|'message.sent'|'message.delivered'|'message.auto_replied'|'message.hard_bounced'|'message.soft_bounced'|'message.spam_complaint'|'message.failed'|'message.suppressed'|'message.unsubscribed'|'message.opened'|'message.clicked'|'message.inbound'|'message.policy_rejected'|'suppression.added'|'suppression.removed'|'webhook.test'
  * @phpstan-type WebhookListData array{id: string, route_id: string, name: string, url: string, events: list<WebhookEvent>, enabled: bool, last_called_at: string|null, created_at: string, updated_at: string}
  * @phpstan-type StatsQuery StatsRequestData
- * @phpstan-type SendMailResponse array{message_id: string, status: MessageStatus}
+ * @phpstan-type SendMailResponse array{message_id: string|null, status: MessageStatus, scheduled_at?: string}
  * @phpstan-type SendBatchMailResponse list<SendMailResponse>
+ * @phpstan-type RescheduleMessageRequest array{scheduled_at: string}
+ * @phpstan-type RescheduleMessageResponse array{message_id: string, status: MessageStatus|null, scheduled_at: string|null}
  * @phpstan-type DomainListResponse array{data: list<DomainListData>, path: string|null, per_page: int, next_cursor: string|null, next_page_url: string|null, prev_cursor: string|null, prev_page_url: string|null}
  * @phpstan-type DomainResponse DomainData
  * @phpstan-type DeleteDomainResponse array{message: string}

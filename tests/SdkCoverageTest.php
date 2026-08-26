@@ -27,6 +27,8 @@ test('it exposes every documented api operation', function () {
         ['team', 'v1.blockedFileTypes', ApiClient::class, 'blockedFileTypes'],
         ['team', 'message.index', MessagesEndpoint::class, 'list'],
         ['team', 'message.show', MessagesEndpoint::class, 'retrieve'],
+        ['team', 'rescheduleMessage', MessagesEndpoint::class, 'reschedule'],
+        ['team', 'cancelScheduledMessage', MessagesEndpoint::class, 'cancel'],
         ['team', 'message.events', MessagesEndpoint::class, 'events'],
         ['team', 'message.source', MessagesEndpoint::class, 'source'],
         ['team', 'message.html', MessagesEndpoint::class, 'html'],
@@ -65,7 +67,7 @@ test('it exposes every documented api operation', function () {
         ['team', 'webhook.showDelivery', WebhooksEndpoint::class, 'delivery'],
     ];
 
-    expect($operations)->toHaveCount(50);
+    expect($operations)->toHaveCount(52);
 
     $missing = [];
 

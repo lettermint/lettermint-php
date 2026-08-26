@@ -105,6 +105,14 @@ class EmailEndpoint extends Endpoint
         return $this;
     }
 
+    /** Set the requested delivery time for the email. */
+    public function scheduledAt(string $scheduledAt): self
+    {
+        $this->payload['scheduled_at'] = $scheduledAt;
+
+        return $this;
+    }
+
     /**
      * Set the HTML body of the email.
      *

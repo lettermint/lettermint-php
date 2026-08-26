@@ -7,7 +7,8 @@ use Lettermint\Resource;
 /**
  * @property string $id
  * @property 'inbound'|'outbound' $type
- * @property 'pending'|'queued'|'suppressed'|'processed'|'delivered'|'opened'|'clicked'|'soft_bounced'|'hard_bounced'|'spam_complaint'|'failed'|'blocked'|'policy_rejected'|'unsubscribed' $status
+ * @property 'scheduled'|'pending'|'queued'|'suppressed'|'processed'|'delivered'|'opened'|'clicked'|'soft_bounced'|'hard_bounced'|'spam_complaint'|'failed'|'blocked'|'policy_rejected'|'unsubscribed'|'canceled' $status
+ * @property string|null $scheduled_at
  * @property float|int|null $spam_score
  * @property string $from_email
  * @property string|null $from_name

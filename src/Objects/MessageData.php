@@ -7,26 +7,27 @@ use Lettermint\Resource;
 /**
  * @property string $id
  * @property 'inbound'|'outbound' $type
- * @property 'pending'|'queued'|'suppressed'|'processed'|'delivered'|'opened'|'clicked'|'soft_bounced'|'hard_bounced'|'spam_complaint'|'failed'|'blocked'|'policy_rejected'|'unsubscribed' $status
+ * @property 'scheduled'|'pending'|'queued'|'suppressed'|'processed'|'delivered'|'opened'|'clicked'|'soft_bounced'|'hard_bounced'|'spam_complaint'|'failed'|'blocked'|'policy_rejected'|'unsubscribed'|'canceled' $status
  * @property string|null $status_changed_at
+ * @property string|null $scheduled_at
  * @property string|null $tag
  * @property string $from_email
  * @property string|null $from_name
  * @property list<string>|null $reply_to
  * @property string|null $subject
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $to
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $cc
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $bcc
- * @property list<\Lettermint\Objects\MessageAttachmentData>|null $attachments
+ * @property list<MessageRecipientData>|null $to
+ * @property list<MessageRecipientData>|null $cc
+ * @property list<MessageRecipientData>|null $bcc
+ * @property list<MessageAttachmentData>|null $attachments
  * @property array<string, string>|null $metadata
  * @property float|int|null $spam_score
- * @property list<\Lettermint\Objects\SpamSymbol> $spam_symbols
+ * @property list<SpamSymbol> $spam_symbols
  * @property string $route_id
  * @property string $created_at
  */
 final class MessageData extends Resource
 {
     protected static array $casts = [
-        'spam_symbols' => [\Lettermint\Objects\SpamSymbol::class],
+        'spam_symbols' => [SpamSymbol::class],
     ];
 }

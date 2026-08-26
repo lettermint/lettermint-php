@@ -8,6 +8,7 @@ use Lettermint\Resource;
  * @property string $route
  * @property string $from
  * @property string $subject
+ * @property string $scheduled_at
  * @property string|null $tag
  * @property string|null $html
  * @property string|null $text

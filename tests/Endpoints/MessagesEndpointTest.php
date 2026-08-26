@@ -25,6 +25,14 @@ test('it retrieves messages', function () {
     expect($this->endpoint->retrieve('message-id')->toArray())->toBe(['data' => ['id' => 'message-id']]);
 });
 
+test('it reschedules and cancels scheduled messages', function () {
+    $this->httpClient->shouldReceive('patch')->once()->with('/v1/messages/message-id', ['scheduled_at' => '2026-08-27T09:00:00Z'], [])->andReturn(['message_id' => 'message-id', 'status' => 'scheduled', 'scheduled_at' => '2026-08-27T09:00:00Z']);
+    $this->httpClient->shouldReceive('post')->once()->with('/v1/messages/message-id/cancel', [], [])->andReturn(['message_id' => 'message-id', 'status' => 'canceled', 'scheduled_at' => null]);
+
+    expect($this->endpoint->reschedule('message-id', ['scheduled_at' => '2026-08-27T09:00:00Z'])->status)->toBe('scheduled');
+    expect($this->endpoint->cancel('message-id')->status)->toBe('canceled');
+});
+
 test('it retrieves message events', function () {
     $query = ['include_machine_events' => true];
     $this->httpClient->shouldReceive('get')->once()->with('/v1/messages/message-id/events', $query)->andReturn(['data' => []]);
