@@ -62,6 +62,16 @@ abstract class Endpoint
     }
 
     /**
+     * @param  array<array-key, mixed>  $data
+     * @param  array<string, string>  $headers
+     * @return array<array-key, mixed>
+     */
+    protected function patchArray(string $path, array $data = [], array $headers = []): array
+    {
+        return $this->expectArray($this->httpClient->patch($path, $data, $headers));
+    }
+
+    /**
      * @param  array<array-key, mixed>  $query
      * @return array<array-key, mixed>
      */

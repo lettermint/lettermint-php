@@ -79,6 +79,16 @@ class HttpClient
     }
 
     /**
+     * @param  RequestBody  $data
+     * @param  RequestHeaders  $headers
+     * @return ApiResponse
+     */
+    public function patch(string $path, array $data, array $headers = []): mixed
+    {
+        return $this->request('patch', $path, ['json' => $data], $headers);
+    }
+
+    /**
      * @param  RequestBody  $query  Query parameters
      * @param  RequestHeaders  $headers  Additional headers for this request
      * @return ApiResponse Resulting API response
