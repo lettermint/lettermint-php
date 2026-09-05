@@ -29,6 +29,7 @@ test('it exposes every documented api operation', function () {
         ['team', 'message.show', MessagesEndpoint::class, 'retrieve'],
         ['team', 'rescheduleMessage', MessagesEndpoint::class, 'reschedule'],
         ['team', 'cancelScheduledMessage', MessagesEndpoint::class, 'cancel'],
+        ['team', 'processInboundMessage', MessagesEndpoint::class, 'process'],
         ['team', 'message.events', MessagesEndpoint::class, 'events'],
         ['team', 'message.source', MessagesEndpoint::class, 'source'],
         ['team', 'message.html', MessagesEndpoint::class, 'html'],
@@ -67,7 +68,7 @@ test('it exposes every documented api operation', function () {
         ['team', 'webhook.showDelivery', WebhooksEndpoint::class, 'delivery'],
     ];
 
-    expect($operations)->toHaveCount(52);
+    expect($operations)->toHaveCount(53);
 
     $missing = [];
 

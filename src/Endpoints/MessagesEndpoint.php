@@ -5,6 +5,7 @@ namespace Lettermint\Endpoints;
 use Lettermint\Responses\MessageEventsResponse;
 use Lettermint\Responses\MessageListResponse;
 use Lettermint\Responses\MessageResponse;
+use Lettermint\Responses\ProcessInboundMessageResponse;
 use Lettermint\Responses\ScheduledMessageResponse;
 
 class MessagesEndpoint extends Endpoint
@@ -28,6 +29,11 @@ class MessagesEndpoint extends Endpoint
     public function cancel(string $messageId): ScheduledMessageResponse
     {
         return $this->hydrate(ScheduledMessageResponse::class, $this->postArray($this->path('/messages/{messageId}/cancel', ['messageId' => $messageId])));
+    }
+
+    public function process(string $messageId): ProcessInboundMessageResponse
+    {
+        return $this->hydrate(ProcessInboundMessageResponse::class, $this->postArray($this->path('/messages/{messageId}/process', ['messageId' => $messageId])));
     }
 
     public function events(string $messageId, array $query = []): MessageEventsResponse
