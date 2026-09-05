@@ -33,6 +33,12 @@ test('it reschedules and cancels scheduled messages', function () {
     expect($this->endpoint->cancel('message-id')->status)->toBe('canceled');
 });
 
+test('it processes a quarantined inbound message', function () {
+    $this->httpClient->shouldReceive('post')->once()->with('/v1/messages/message-id/process', [], [])->andReturn(['data' => ['message_id' => 'message-id', 'status' => 'queued', 'webhook_target_count' => 1]]);
+
+    expect($this->endpoint->process('message-id')->data['status'])->toBe('queued');
+});
+
 test('it retrieves message events', function () {
     $query = ['include_machine_events' => true];
     $this->httpClient->shouldReceive('get')->once()->with('/v1/messages/message-id/events', $query)->andReturn(['data' => []]);
