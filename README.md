@@ -135,6 +135,26 @@ same request with the same idempotency key, the API will return the same respons
 
 For more information, refer to the [documentation](https://docs.lettermint.co/platform/emails/idempotency).
 
+### Message tags
+
+```php
+use Lettermint\Objects\MessageTag;
+
+$response = $lettermint->email
+    ->from('sender@example.com')
+    ->to('recipient@example.com')
+    ->subject('Welcome')
+    ->tag('legacy-tag')
+    ->tags([
+        new MessageTag('campaign', 'welcome'),
+        new MessageTag('customer', 'new'),
+    ])
+    ->send();
+```
+
+`tag()` remains available for the legacy single tag. `tags()` accepts typed
+`MessageTag` values and the previous name/value array form.
+
 ### API Client
 
 Use the API client for team-scoped resources such as projects, domains, routes, suppressions, stats, messages, and webhooks:

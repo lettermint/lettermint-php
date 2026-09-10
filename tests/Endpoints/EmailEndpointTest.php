@@ -2,6 +2,7 @@
 
 use Lettermint\Client\HttpClient;
 use Lettermint\Endpoints\EmailEndpoint;
+use Lettermint\Objects\MessageTag;
 use Lettermint\Responses\SendBatchMailResponse;
 use Lettermint\Responses\SendMailResponse;
 
@@ -517,3 +518,37 @@ test('it handles reusable tags', function () {
         ->tags($tags)
         ->send();
 });
+
+test('it handles typed message tags and legacy arrays', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', Mockery::on(fn (array $payload): bool => $payload['tags'] === [
+            ['name' => 'campaign', 'value' => 'welcome'],
+            ['name' => 'customer', 'value' => 'new'],
+        ]), [])
+        ->andReturn(['message_id' => '123', 'status' => 'pending']);
+
+    $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->tags([
+            new MessageTag('campaign', 'welcome'),
+            ['name' => 'customer', 'value' => 'new'],
+        ])
+        ->send();
+});
+
+test('it rejects invalid reusable tags', function (array $tags) {
+    $this->endpoint->tags($tags);
+})->with([
+    'duplicate names' => [[['name' => 'same', 'value' => 'one'], ['name' => 'same', 'value' => 'two']]],
+    'reserved name' => [[['name' => '__LETTERMINT_internal', 'value' => 'one']]],
+    'invalid value' => [[['name' => 'valid', 'value' => 'invalid value']]],
+])->throws(InvalidArgumentException::class);
+
+test('it counts the legacy tag in the reusable tag limit', function () {
+    $tags = array_map(fn (int $index): array => ['name' => "tag_{$index}", 'value' => 'one'], range(1, 20));
+    $this->endpoint->tag('legacy')->tags($tags);
+})->throws(InvalidArgumentException::class);
