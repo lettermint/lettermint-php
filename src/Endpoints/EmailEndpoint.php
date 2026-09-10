@@ -2,6 +2,8 @@
 
 namespace Lettermint\Endpoints;
 
+use InvalidArgumentException;
+use Lettermint\Objects\MessageTag;
 use Lettermint\Responses\SendBatchMailResponse;
 use Lettermint\Responses\SendMailResponse;
 
@@ -247,6 +249,10 @@ class EmailEndpoint extends Endpoint
      */
     public function tag(?string $tag): self
     {
+        if ($tag !== null && count($this->payload['tags'] ?? []) >= 20) {
+            throw new InvalidArgumentException('A legacy tag and no more than 19 message tags are permitted.');
+        }
+
         $this->payload['tag'] = $tag;
 
         return $this;
@@ -255,11 +261,32 @@ class EmailEndpoint extends Endpoint
     /**
      * Set reusable name-value tags for the email.
      *
-     * @param  list<array{name: string, value: string}>  $tags
+     * Existing name/value arrays remain supported for backward compatibility.
+     *
+     * @param  list<MessageTag|array{name: string, value: string}>  $tags
      */
     public function tags(array $tags): self
     {
-        $this->payload['tags'] = $tags;
+        $maximum = isset($this->payload['tag']) ? 19 : 20;
+        if (count($tags) > $maximum) {
+            throw new InvalidArgumentException("No more than {$maximum} message tags are permitted.");
+        }
+
+        $normalized = array_map(
+            static fn (MessageTag|array $tag): MessageTag => $tag instanceof MessageTag
+                ? $tag
+                : new MessageTag($tag['name'], $tag['value']),
+            $tags,
+        );
+        $names = array_map(static fn (MessageTag $tag): string => $tag->name, $normalized);
+        if (count($names) !== count(array_unique($names, SORT_STRING))) {
+            throw new InvalidArgumentException('Message tag names must be unique and case-sensitive.');
+        }
+
+        $this->payload['tags'] = array_map(
+            static fn (MessageTag $tag): array => $tag->toArray(),
+            $normalized,
+        );
 
         return $this;
     }
