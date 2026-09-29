@@ -6,10 +6,13 @@ use Lettermint\Resource;
 
 /**
  * @property string $id
- * @property string $route_id
+ * @property 'team'|'project'|'route' $scope
+ * @property list<string> $project_ids
+ * @property list<string> $route_ids
+ * @property string|null $route_id
  * @property string $name
  * @property string $url
- * @property list<'message.created'|'message.sent'|'message.delivered'|'message.auto_replied'|'message.hard_bounced'|'message.soft_bounced'|'message.spam_complaint'|'message.failed'|'message.suppressed'|'message.unsubscribed'|'message.opened'|'message.clicked'|'message.inbound'|'message.policy_rejected'|'suppression.added'|'suppression.removed'|'webhook.test'> $events
+ * @property list<string> $events
  * @property bool $enabled
  * @property string|null $last_called_at
  * @property string $created_at

@@ -6,11 +6,12 @@ use Lettermint\Resource;
 
 /**
  * @property string|null $email
+ * @property list<string>|null $emails
  * @property 'spam_complaint'|'hard_bounce'|'unsubscribe'|'manual' $reason
- * @property 'global'|'team'|'project'|'route' $scope
+ * @property 'team'|'project'|'route' $scope
  * @property string|null $route_id
  * @property string|null $project_id
- * @property list<string>|null $emails
+ * @property 'all'|'broadcast'|null $applies_to
  */
 final class StoreSuppressionData extends Resource
 {

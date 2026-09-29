@@ -15,12 +15,13 @@ use Lettermint\Resource;
  * @property list<string> $events
  * @property bool $enabled
  * @property bool $include_machine_events
+ * @property string $secret
  * @property string|null $last_called_at
  * @property string $created_at
  * @property string $updated_at
  * @property 'live'|'sandbox'|'both' $delivery_mode_filter
  */
-final class WebhookData extends Resource
+final class WebhookSecretData extends Resource
 {
     //
 }

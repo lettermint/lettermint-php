@@ -13,7 +13,7 @@ use Lettermint\Resource;
  * @property int $tier
  * @property string|null $verified_at
  * @property list<string> $features
- * @property list<TeamAddonData> $addons
+ * @property list<\Lettermint\Objects\TeamAddonData> $addons
  * @property string $created_at
  * @property int $domains_count
  * @property int $projects_count
@@ -22,6 +22,6 @@ use Lettermint\Resource;
 final class TeamData extends Resource
 {
     protected static array $casts = [
-        'addons' => [TeamAddonData::class],
+        'addons' => [\Lettermint\Objects\TeamAddonData::class],
     ];
 }
