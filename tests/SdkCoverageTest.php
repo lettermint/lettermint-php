@@ -207,6 +207,16 @@ test('generated php api types include current team schema additions', function (
         ->toContain('scope: SuppressionScope');
 });
 
+test('generated php api types preserve scheduled message and cursor aliases', function () {
+    $typesSource = file_get_contents(__DIR__.'/../src/Types/ApiTypes.php');
+
+    expect($typesSource)
+        ->toContain('@phpstan-type CursorPaginator array{')
+        ->toContain('@phpstan-type RescheduleMessageResponse array{')
+        ->toContain('@phpstan-type CancelScheduledMessageResponse array{')
+        ->toContain('@phpstan-type ProcessInboundMessageResponse array{');
+});
+
 test('generated php api types include Sandbox contracts', function () {
     $typesSource = file_get_contents(__DIR__.'/../src/Types/ApiTypes.php');
     $sendResponseSource = file_get_contents(__DIR__.'/../src/Responses/SendMailResponse.php');

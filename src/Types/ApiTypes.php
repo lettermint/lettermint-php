@@ -14,6 +14,7 @@ namespace Lettermint\Types;
  * @phpstan-type SandboxResult 'delivered'|'hard_bounced'|'soft_bounced'|'deferred'|'failed'|'suppressed'|'spam_complaint'|'auto_replied'|'opened'|'clicked'|'unsubscribed'
  * @phpstan-type AttachmentDelivery 'inline'|'url'
  * @phpstan-type BuiltInTeamRole 'owner'|'admin'|'member'
+ * @phpstan-type CursorPaginator array{data: list<string>, path: string|null, per_page: int, next_cursor: string|null, next_page_url: string|null, prev_cursor: string|null, prev_page_url: string|null}
  * @phpstan-type DkimMode 'legacy_txt'|'managed_cname'
  * @phpstan-type DnsRecordPurpose 'return_path'|'dmarc'|'dkim_legacy'|'dkim_primary'|'dkim_secondary'
  * @phpstan-type DnsRecordStatus 'active'|'failed'|'pending'
@@ -90,6 +91,8 @@ namespace Lettermint\Types;
  * @phpstan-type StatsQuery StatsRequestData
  * @phpstan-type SendMailResponse array{message_id: string|null, status: MessageStatus, scheduled_at: string, sandbox?: bool, sandbox_result?: SandboxResult}|array{message_id: string|null, status: MessageStatus, sandbox?: bool, sandbox_result?: SandboxResult}
  * @phpstan-type SendBatchMailResponse list<SendMailResponse>
+ * @phpstan-type RescheduleMessageResponse array{message_id: string, status: MessageStatus|null, scheduled_at: string|null}
+ * @phpstan-type CancelScheduledMessageResponse array{message_id: string, status: MessageStatus|null, scheduled_at: string|null}
  * @phpstan-type DomainListResponse array{data: list<DomainListData>, path: string|null, per_page: int, next_cursor: string|null, next_page_url: string|null, prev_cursor: string|null, prev_page_url: string|null}
  * @phpstan-type DomainResponse DomainData
  * @phpstan-type DeleteDomainResponse array{message: string}
@@ -100,6 +103,7 @@ namespace Lettermint\Types;
  * @phpstan-type MessageResponse MessageData
  * @phpstan-type MessageListResponse array{data: list<MessageListData>, links: list<string>, meta: array{path: string|null, per_page: int, next_cursor: string|null, next_cursor_url: string|null, prev_cursor: string|null, prev_cursor_url: string|null}}
  * @phpstan-type MessageEventsResponse array{data: list<MessageEventData>, links: list<string>, meta: array{path: string|null, per_page: int, next_cursor: string|null, next_cursor_url: string|null, prev_cursor: string|null, prev_cursor_url: string|null}}
+ * @phpstan-type ProcessInboundMessageResponse array{data: array{message_id: string, status: 'queued', webhook_target_count: int}}
  * @phpstan-type ProjectListResponse array{data: list<ProjectListData>, path: string|null, per_page: int, next_cursor: string|null, next_page_url: string|null, prev_cursor: string|null, prev_page_url: string|null}
  * @phpstan-type CreateProjectResponse array{data: ProjectData, message: string, api_token: string}
  * @phpstan-type ProjectResponse ProjectData
