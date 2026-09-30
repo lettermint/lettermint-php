@@ -7,6 +7,7 @@ use Lettermint\Resource;
 /**
  * @property string $id
  * @property string $name
+ * @property 'live'|'sandbox' $delivery_mode
  * @property bool $smtp_enabled
  * @property int $routes_count
  * @property int $domains_count
