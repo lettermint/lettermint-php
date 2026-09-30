@@ -25,6 +25,7 @@ test('it exposes typed send response classes', function () {
         ->toBeString()
         ->toContain('@phpstan-import-type SendMailRequest')
         ->toContain('@phpstan-import-type SendBatchMailRequest')
+        ->toContain('@phpstan-import-type SandboxResult')
         ->not->toContain('@phpstan-type SendResponse');
 
     expect($methodReflection->getReturnType()?->getName())->toBe(SendMailResponse::class);
@@ -271,6 +272,34 @@ test('it handles per email settings', function () {
         ->subject('Test Subject')
         ->settings(['track_opens' => false, 'track_clicks' => true, 'tls' => 'enforced'])
         ->send();
+});
+
+test('it handles a Sandbox result', function () {
+    $this->httpClient
+        ->shouldReceive('post')
+        ->once()
+        ->with('/v1/send', [
+            'from' => 'sender@example.com',
+            'to' => ['recipient@example.com'],
+            'subject' => 'Test Subject',
+            'sandbox_result' => 'hard_bounced',
+        ], [])
+        ->andReturn([
+            'message_id' => '123',
+            'status' => 'hard_bounced',
+            'sandbox' => true,
+            'sandbox_result' => 'hard_bounced',
+        ]);
+
+    $response = $this->endpoint
+        ->from('sender@example.com')
+        ->to('recipient@example.com')
+        ->subject('Test Subject')
+        ->sandboxResult('hard_bounced')
+        ->send();
+
+    expect($response->sandbox)->toBeTrue()
+        ->and($response->sandbox_result)->toBe('hard_bounced');
 });
 
 test('it handles attachment content type', function () {

@@ -10,6 +10,7 @@ use Lettermint\Responses\SendMailResponse;
 /**
  * @phpstan-import-type SendMailRequest from \Lettermint\Types\ApiTypes
  * @phpstan-import-type SendBatchMailRequest from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type SandboxResult from \Lettermint\Types\ApiTypes
  *
  * @phpstan-type AttachmentPayload array{
  *     filename: string,
@@ -37,7 +38,8 @@ use Lettermint\Responses\SendMailResponse;
  *     tag?: string|null,
  *     tags?: list<array{name: string, value: string}>,
  *     settings?: EmailSettings|null,
- *     headers?: array<string, string>
+ *     headers?: array<string, string>,
+ *     sandbox_result?: SandboxResult
  * }
  */
 class EmailEndpoint extends Endpoint
@@ -287,6 +289,18 @@ class EmailEndpoint extends Endpoint
             static fn (MessageTag $tag): array => $tag->toArray(),
             $normalized,
         );
+
+        return $this;
+    }
+
+    /**
+     * Select the simulated result for a Sandbox project.
+     *
+     * @phpstan-param SandboxResult $result
+     */
+    public function sandboxResult(string $result): self
+    {
+        $this->payload['sandbox_result'] = $result;
 
         return $this;
     }

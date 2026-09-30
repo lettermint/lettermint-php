@@ -9,12 +9,12 @@ use Lettermint\Resource;
  * @property string $name
  * @property string $email
  * @property array<string, mixed> $role
- * @property TeamMemberProjectAccessData $project_access
+ * @property \Lettermint\Objects\TeamMemberProjectAccessData $project_access
  * @property string|null $joined_at
  */
 final class TeamMemberData extends Resource
 {
     protected static array $casts = [
-        'project_access' => TeamMemberProjectAccessData::class,
+        'project_access' => \Lettermint\Objects\TeamMemberProjectAccessData::class,
     ];
 }

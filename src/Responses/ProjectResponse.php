@@ -2,9 +2,6 @@
 
 namespace Lettermint\Responses;
 
-use Lettermint\Objects\DomainData;
-use Lettermint\Objects\MessageStatsData;
-use Lettermint\Objects\RouteData;
 use Lettermint\Resource;
 
 /**
@@ -16,13 +13,14 @@ use Lettermint\Resource;
  * @property string|null $token_generated_at
  * @property string|null $token_last_used_at
  * @property string|null $token_last_used_ip
- * @property list<RouteData> $routes
+ * @property list<\Lettermint\Objects\RouteData> $routes
  * @property int $routes_count
- * @property list<DomainData> $domains
+ * @property list<\Lettermint\Objects\DomainData> $domains
  * @property int $domains_count
- * @property MessageStatsData|mixed $last_28_days
+ * @property \Lettermint\Objects\MessageStatsData|null $last_28_days
  * @property string $created_at
  * @property string $updated_at
+ * @property 'live'|'sandbox' $delivery_mode
  */
 final class ProjectResponse extends Resource
 {

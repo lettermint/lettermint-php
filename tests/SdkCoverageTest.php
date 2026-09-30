@@ -206,3 +206,33 @@ test('generated php api types include current team schema additions', function (
         ->toContain('spam_score?: float|int|null')
         ->toContain('scope: SuppressionScope');
 });
+
+test('generated php api types preserve scheduled message and cursor aliases', function () {
+    $typesSource = file_get_contents(__DIR__.'/../src/Types/ApiTypes.php');
+
+    expect($typesSource)
+        ->toContain('@phpstan-type CursorPaginator array{')
+        ->toContain('@phpstan-type RescheduleMessageResponse array{')
+        ->toContain('@phpstan-type CancelScheduledMessageResponse array{')
+        ->toContain('@phpstan-type ProcessInboundMessageResponse array{');
+});
+
+test('generated php api types include Sandbox contracts', function () {
+    $typesSource = file_get_contents(__DIR__.'/../src/Types/ApiTypes.php');
+    $sendResponseSource = file_get_contents(__DIR__.'/../src/Responses/SendMailResponse.php');
+    $webhookDeliverySource = file_get_contents(__DIR__.'/../src/Objects/WebhookDeliveryData.php');
+
+    expect($typesSource)
+        ->toContain("@phpstan-type DeliveryMode 'live'|'sandbox'")
+        ->toContain('@phpstan-type SandboxResult ')
+        ->toContain('sandbox_result?: SandboxResult')
+        ->toContain('delivery_mode: DeliveryMode')
+        ->toContain('delivery_mode_filter: WebhookDeliveryModeFilter')
+        ->toContain('sandbox: bool');
+
+    expect($sendResponseSource)
+        ->toContain('$sandbox')
+        ->toContain('$sandbox_result');
+
+    expect($webhookDeliverySource)->toContain('@property bool $sandbox');
+});
