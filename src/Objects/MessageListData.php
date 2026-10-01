@@ -13,9 +13,9 @@ use Lettermint\Resource;
  * @property string $from_email
  * @property string|null $from_name
  * @property string|null $subject
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $to
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $cc
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $bcc
+ * @property list<MessageRecipientData>|null $to
+ * @property list<MessageRecipientData>|null $cc
+ * @property list<MessageRecipientData>|null $bcc
  * @property list<string>|null $reply_to
  * @property string|null $tag
  * @property list<array<string, mixed>> $tags
@@ -26,5 +26,9 @@ use Lettermint\Resource;
  */
 final class MessageListData extends Resource
 {
-    //
+    protected static array $casts = [
+        'to' => [MessageRecipientData::class],
+        'cc' => [MessageRecipientData::class],
+        'bcc' => [MessageRecipientData::class],
+    ];
 }

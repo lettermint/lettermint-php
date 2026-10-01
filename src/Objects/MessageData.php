@@ -16,13 +16,13 @@ use Lettermint\Resource;
  * @property string|null $from_name
  * @property list<string>|null $reply_to
  * @property string|null $subject
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $to
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $cc
- * @property list<\Lettermint\Objects\MessageRecipientData>|null $bcc
- * @property list<\Lettermint\Objects\MessageAttachmentData>|null $attachments
+ * @property list<MessageRecipientData>|null $to
+ * @property list<MessageRecipientData>|null $cc
+ * @property list<MessageRecipientData>|null $bcc
+ * @property list<MessageAttachmentData>|null $attachments
  * @property array<string, string>|null $metadata
  * @property float|int|null $spam_score
- * @property list<\Lettermint\Objects\SpamSymbol> $spam_symbols
+ * @property list<SpamSymbol> $spam_symbols
  * @property string $route_id
  * @property string $created_at
  * @property 'live'|'sandbox' $delivery_mode
@@ -31,6 +31,10 @@ use Lettermint\Resource;
 final class MessageData extends Resource
 {
     protected static array $casts = [
-        'spam_symbols' => [\Lettermint\Objects\SpamSymbol::class],
+        'to' => [MessageRecipientData::class],
+        'cc' => [MessageRecipientData::class],
+        'bcc' => [MessageRecipientData::class],
+        'attachments' => [MessageAttachmentData::class],
+        'spam_symbols' => [SpamSymbol::class],
     ];
 }

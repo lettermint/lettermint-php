@@ -11,9 +11,9 @@ use Lettermint\Resource;
  * @property int $spam_complaints
  * @property int|null $opened
  * @property int|null $clicked
- * @property \Lettermint\Objects\StatsInboundData $inbound
- * @property \Lettermint\Objects\StatsTypeData|null $transactional
- * @property \Lettermint\Objects\StatsTypeData|null $broadcast
+ * @property StatsInboundData $inbound
+ * @property StatsTypeData|null $transactional
+ * @property StatsTypeData|null $broadcast
  * @property int|null $observed_opened
  * @property int|null $human_opened
  * @property int|null $privacy_opened
@@ -24,6 +24,8 @@ use Lettermint\Resource;
 final class StatsTotalsData extends Resource
 {
     protected static array $casts = [
-        'inbound' => \Lettermint\Objects\StatsInboundData::class,
+        'transactional' => StatsTypeData::class,
+        'broadcast' => StatsTypeData::class,
+        'inbound' => StatsInboundData::class,
     ];
 }
