@@ -13,6 +13,12 @@ use Lettermint\Endpoints\WebhooksEndpoint;
 
 test('it exposes every documented api operation', function () {
     $operations = [
+        ['team', 'v1.analytics', ApiClient::class, 'analytics'],
+        ['team', 'getReportForwarding', ProjectsEndpoint::class, 'retrieveReportForwarding'],
+        ['team', 'updateReportForwarding', ProjectsEndpoint::class, 'updateReportForwarding'],
+        ['team', 'deleteReportForwarding', ProjectsEndpoint::class, 'deleteReportForwarding'],
+        ['team', 'verifyReportForwarding', ProjectsEndpoint::class, 'verifyReportForwarding'],
+        ['team', 'resendReportForwardingCode', ProjectsEndpoint::class, 'resendReportForwardingCode'],
         ['sending', 'v1.sendMail', EmailEndpoint::class, 'send'],
         ['sending', 'v1.sendBatchMail', EmailEndpoint::class, 'sendBatch'],
         ['sending', 'v1.ping', EmailEndpoint::class, 'ping'],
@@ -68,7 +74,7 @@ test('it exposes every documented api operation', function () {
         ['team', 'webhook.showDelivery', WebhooksEndpoint::class, 'delivery'],
     ];
 
-    expect($operations)->toHaveCount(53);
+    expect($operations)->toHaveCount(59);
 
     $missing = [];
 

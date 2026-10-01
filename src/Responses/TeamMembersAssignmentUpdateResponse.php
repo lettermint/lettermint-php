@@ -2,6 +2,7 @@
 
 namespace Lettermint\Responses;
 
+use Lettermint\Objects\TeamMemberProjectAccessData;
 use Lettermint\Resource;
 
 /**
@@ -14,5 +15,7 @@ use Lettermint\Resource;
  */
 final class TeamMembersAssignmentUpdateResponse extends Resource
 {
-    //
+    protected static array $casts = [
+        'project_access' => TeamMemberProjectAccessData::class,
+    ];
 }

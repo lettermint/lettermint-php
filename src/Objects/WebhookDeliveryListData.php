@@ -12,6 +12,7 @@ use Lettermint\Resource;
  * @property string|null $source_project_id
  * @property string|null $source_route_id
  * @property 'pending'|'success'|'failed'|'client_error'|'server_error'|'timeout' $status
+ * @property bool $sandbox
  * @property int $attempt_number
  * @property int|null $http_status_code
  * @property int|null $duration_ms

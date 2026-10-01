@@ -6,7 +6,7 @@ use Lettermint\Resource;
 
 /**
  * @property list<\Lettermint\Objects\SuppressedRecipientData> $data
- * @property string|null $path
+ * @property string $path
  * @property int $per_page
  * @property string|null $next_cursor
  * @property string|null $next_page_url

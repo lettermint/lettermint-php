@@ -14,6 +14,7 @@ use Lettermint\Resource;
  * @property string $url
  * @property list<string> $events
  * @property bool $enabled
+ * @property 'live'|'sandbox'|'both' $delivery_mode_filter
  * @property string|null $last_called_at
  * @property string $created_at
  * @property string $updated_at

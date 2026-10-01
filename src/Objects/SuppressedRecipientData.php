@@ -18,5 +18,7 @@ use Lettermint\Resource;
  */
 final class SuppressedRecipientData extends Resource
 {
-    //
+    protected static array $casts = [
+        'source_message' => SuppressionSourceMessageData::class,
+    ];
 }

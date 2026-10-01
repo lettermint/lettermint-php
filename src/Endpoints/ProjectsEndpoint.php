@@ -8,6 +8,7 @@ use Lettermint\Responses\DeleteProjectResponse;
 use Lettermint\Responses\ProjectListResponse;
 use Lettermint\Responses\ProjectResponse;
 use Lettermint\Responses\ProjectRoutesResponse;
+use Lettermint\Responses\ReportForwardingResponse;
 use Lettermint\Responses\RotateProjectTokenResponse;
 use Lettermint\Responses\UpdateProjectResponse;
 
@@ -15,9 +16,38 @@ use Lettermint\Responses\UpdateProjectResponse;
  * @phpstan-import-type StoreProjectData from \Lettermint\Types\ApiTypes
  * @phpstan-import-type UpdateProjectData from \Lettermint\Types\ApiTypes
  * @phpstan-import-type StoreRouteData from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type ReportForwardingRequest from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type VerifyReportForwardingRequest from \Lettermint\Types\ApiTypes
  */
 class ProjectsEndpoint extends Endpoint
 {
+    public function retrieveReportForwarding(string $projectId): ReportForwardingResponse
+    {
+        return $this->hydrate(ReportForwardingResponse::class, $this->getArray($this->path('/projects/{projectId}/report-forwarding', ['projectId' => $projectId])));
+    }
+
+    /** @phpstan-param ReportForwardingRequest $data */
+    public function updateReportForwarding(string $projectId, array $data): ReportForwardingResponse
+    {
+        return $this->hydrate(ReportForwardingResponse::class, $this->putArray($this->path('/projects/{projectId}/report-forwarding', ['projectId' => $projectId]), $data));
+    }
+
+    public function deleteReportForwarding(string $projectId): void
+    {
+        $this->httpClient->delete($this->path('/projects/{projectId}/report-forwarding', ['projectId' => $projectId]), []);
+    }
+
+    /** @phpstan-param VerifyReportForwardingRequest $data */
+    public function verifyReportForwarding(string $projectId, array $data): ReportForwardingResponse
+    {
+        return $this->hydrate(ReportForwardingResponse::class, $this->postArray($this->path('/projects/{projectId}/report-forwarding/verify', ['projectId' => $projectId]), $data));
+    }
+
+    public function resendReportForwardingCode(string $projectId): ReportForwardingResponse
+    {
+        return $this->hydrate(ReportForwardingResponse::class, $this->postArray($this->path('/projects/{projectId}/report-forwarding/resend-code', ['projectId' => $projectId])));
+    }
+
     public function list(array $query = []): ProjectListResponse
     {
         return $this->hydrate(ProjectListResponse::class, $this->getArray($this->path('/projects'), $query));

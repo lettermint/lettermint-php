@@ -11,6 +11,7 @@ use Lettermint\Endpoints\StatsEndpoint;
 use Lettermint\Endpoints\SuppressionsEndpoint;
 use Lettermint\Endpoints\TeamEndpoint;
 use Lettermint\Endpoints\WebhooksEndpoint;
+use Lettermint\Responses\AnalyticsResponse;
 use Lettermint\Responses\BlockedFileTypesResponse;
 
 /**
@@ -22,9 +23,24 @@ use Lettermint\Responses\BlockedFileTypesResponse;
  * @property-read SuppressionsEndpoint $suppressions Access suppression operations.
  * @property-read TeamEndpoint $team Access team operations.
  * @property-read WebhooksEndpoint $webhooks Access webhook operations.
+ *
+ * @phpstan-import-type AnalyticsRequest from \Lettermint\Types\ApiTypes
  */
 class ApiClient
 {
+    /**
+     * @phpstan-param AnalyticsRequest $data
+     */
+    public function analytics(array $data): AnalyticsResponse
+    {
+        $response = $this->httpClient->post('/v1/analytics', $data, []);
+        if (! is_array($response)) {
+            throw new \UnexpectedValueException('Expected an array response.');
+        }
+
+        return new AnalyticsResponse($response);
+    }
+
     private HttpClient $httpClient;
 
     private array $endpoints = [];
