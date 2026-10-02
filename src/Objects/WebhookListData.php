@@ -12,6 +12,7 @@ use Lettermint\Resource;
  * @property string|null $route_id
  * @property string $name
  * @property string $url
+ * @property bool $has_basic_auth
  * @property list<string> $events
  * @property bool $enabled
  * @property 'live'|'sandbox'|'both' $delivery_mode_filter
