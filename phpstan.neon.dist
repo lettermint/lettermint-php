@@ -1,10 +1,9 @@
-includes:
-    - phpstan-baseline.neon
-
 parameters:
-    level: 5
+    level: 10
     paths:
         - src
+        - tests/phpstan
     tmpDir: build/phpstan
-    checkOctaneCompatibility: true
-    checkModelProperties: true
+    # Public methods validate their input at runtime as well: callers without
+    # static analysis can pass anything, whatever the PHPDoc says.
+    treatPhpDocTypesAsCertain: false

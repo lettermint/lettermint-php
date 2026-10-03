@@ -1,11 +1,15 @@
 {
     "name": "lettermint/lettermint-php",
-    "description": "Official Lettermint PHP SDK.",
+    "description": "Official Lettermint PHP SDK: send email, manage the Team API and verify webhooks.",
     "type": "library",
     "keywords": [
         "Lettermint",
         "php",
-        "lettermint-php"
+        "lettermint-php",
+        "email",
+        "transactional email",
+        "sdk",
+        "webhooks"
     ],
     "homepage": "https://github.com/lettermint/lettermint-php",
     "license": "MIT",
@@ -18,19 +22,15 @@
     ],
     "require": {
         "php": "^8.2",
-        "guzzlehttp/guzzle": "^7.15.2 || ^8.0.1"
+        "guzzlehttp/guzzle": "^7.15.2 || ^8.0.1",
+        "psr/http-message": "^1.1 || ^2.0"
     },
     "require-dev": {
         "laravel/pint": "^1.14",
-        "nunomaduro/collision": "^8.1.1||^7.10.0",
-        "larastan/larastan": "^2.9||^3.0",
-        "orchestra/testbench": "^10.0.0||^9.0.0||^8.22.0",
-        "pestphp/pest": "^3.0",
-        "pestphp/pest-plugin-arch": "^3.0",
-        "pestphp/pest-plugin-laravel": "^3.0",
-        "phpstan/extension-installer": "^1.3||^2.0",
-        "phpstan/phpstan-deprecation-rules": "^1.1||^2.0",
-        "phpstan/phpstan-phpunit": "^1.3||^2.0"
+        "pestphp/pest": "^3.0 || ^4.0",
+        "phpstan/extension-installer": "^1.3 || ^2.0",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-deprecation-rules": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -46,7 +46,9 @@
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
-        "format": "pint"
+        "format": "vendor/bin/pint",
+        "generate": "@php scripts/generate.php",
+        "generate:check": "@php scripts/generate.php --check"
     },
     "config": {
         "sort-packages": true,
