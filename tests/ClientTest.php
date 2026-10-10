@@ -133,6 +133,7 @@ describe('single-token clients', function () {
             fn () => $lettermint->team->members->list(),
             fn () => $lettermint->webhooks->deliveries->list('webhook_1'),
             fn () => $lettermint->analytics(['metrics' => ['accepted']]),
+            fn () => $lettermint->analyticsPages(['metrics' => ['accepted']]),
             fn () => $lettermint->blockedFileTypes(),
             fn () => $lettermint->messages->process('message_1'),
             fn () => $lettermint->domains->iterate(),

@@ -109,6 +109,15 @@ describe('HTTP error mapping', function () {
         expect($error->retryAfter)->toBeGreaterThanOrEqual(59)->toBeLessThanOrEqual(61);
     });
 
+    it('reads Retry-After from a 5xx response', function () {
+        [$error] = sendError(fn () => json(503, ['message' => 'Service Unavailable'], ['Retry-After' => '2']));
+        expect($error)->toBeInstanceOf(ServerException::class)
+            ->and($error->retryAfter)->toBe(2);
+        [$plain] = sendError(fn () => json(500, ['message' => 'Server Error']));
+        expect($plain)->toBeInstanceOf(ServerException::class)
+            ->and($plain->retryAfter)->toBeNull();
+    });
+
     it('does not retry', function () {
         [$error, $api] = sendError(fn () => json(503, ['message' => 'Down']));
         expect($error)->toBeInstanceOf(ServerException::class)
