@@ -2,6 +2,28 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 3.0.0 - 2026-10-04
+
+### What's Changed
+
+* feat(webhooks): support Basic Auth credentials and read flags by @bjarn in https://github.com/lettermint/lettermint-php/pull/42
+* feat!: Lettermint PHP SDK 3.0 by @bjarn in https://github.com/lettermint/lettermint-php/pull/43
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/2.8.0...3.0.0
+
+## 2.8.0 - 2026-10-01
+
+### What's Changed
+
+* Use the SDK release bot for changelog updates by @bjarn in https://github.com/lettermint/lettermint-php/pull/36
+* chore(deps): bump actions/create-github-app-token from 2.2.2 to 3.2.0 by @dependabot[bot] in https://github.com/lettermint/lettermint-php/pull/37
+* Read the release bot identity from GitHub by @bjarn in https://github.com/lettermint/lettermint-php/pull/38
+* feat(api): add sandbox delivery contracts by @bjarn in https://github.com/lettermint/lettermint-php/pull/39
+* feat(api): add analytics and project report forwarding by @bjarn in https://github.com/lettermint/lettermint-php/pull/40
+* fix(types): hydrate nested API resources and inbound route domains by @bjarn in https://github.com/lettermint/lettermint-php/pull/41
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/2.7.0...2.8.0
+
 ## 2.7.0 - 2026-09-14
 
 ### What's Changed
