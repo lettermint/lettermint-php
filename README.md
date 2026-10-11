@@ -257,7 +257,7 @@ $html = $lettermint->messages->html('message-id');
 | `team->members` | `list`, `iterate`, `retrieve`, `updateAssignment` |
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
 | `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)` |
-| (root) | `ping`, `analytics`, `blockedFileTypes` |
+| (root) | `ping`, `analytics`, `analyticsPages`, `blockedFileTypes` |
 
 ### Responses
 
@@ -299,6 +299,51 @@ foreach ($lettermint->messages->iterate(['filter' => ['status' => 'hard_bounced'
 }
 ```
 
+### Analytics
+
+`$lettermint->analytics($query)` runs one analytics query. `metrics` is the only required field; by default the API returns a summary of the last 30 days:
+
+```php
+$result = $lettermint->analytics([
+    'metrics' => ['delivered', 'bounced', 'delivery_rate'],
+    'from' => '2026-10-01',
+    'to' => '2026-10-31',
+    'timezone' => 'Europe/Amsterdam',
+]);
+
+var_dump($result->data->summary?->metrics->delivery_rate); // 0.9836, or null when there is no data
+var_dump($result->meta->partial, $result->meta->effective_to);
+```
+
+Add `include` to ask for a `time_series` or a `breakdown`. A breakdown needs `group_by`, and the API returns its rows in pages of `limit` (at most 200). `analyticsPages()` follows `pagination.next_cursor` for you. It is a generator that yields one whole `AnalyticsResponse` per request, so each page keeps its `meta` and `pagination`:
+
+```php
+$query = [
+    'metrics' => ['delivered', 'bounced'],
+    'include' => ['breakdown'],
+    'group_by' => ['recipient_domain'],
+    'sort' => ['metric' => 'bounced', 'direction' => 'desc'],
+    'limit' => 200,
+];
+
+$rows = [];
+foreach ($lettermint->analyticsPages($query) as $page) {
+    array_push($rows, ...($page->data->breakdown ?? []));
+    if ($page->pagination->truncated) {
+        error_log('More groups exist than the API ranks.');
+    }
+}
+```
+
+A cursor expires 60 seconds after its response, so read the next page promptly. An expired cursor throws a `ValidationException` with `errors['cursor']`; run the query again to start over.
+
+A few things to know when you read a response:
+
+- A metric is `null` when the API cannot measure it for that row or bucket, and a rate is `null` when its denominator is zero. `0` means a measured zero.
+- `data->summary`, `data->time_series` and `data->breakdown` are present only when `include` asks for them. `previous`, `change` and `meta->comparison` are present only with `compare`. An absent field reads as `null`.
+- `smtp_response_group` can be used in `group_by` but not as a filter dimension.
+- Analytics can answer `503` or `504` when a query takes too long or the service is busy. Both throw a `ServerException`; see [Errors](#errors).
+
 ## Errors
 
 Every exception the SDK throws extends `Lettermint\Exceptions\LettermintException`:
@@ -312,7 +357,7 @@ Every exception the SDK throws extends `Lettermint\Exceptions\LettermintExceptio
 | `ConflictException` | 409 | |
 | `ValidationException` | 422 | `errors` (field errors) |
 | `RateLimitException` | 429 | `retryAfter` (seconds) |
-| `ServerException` | 5xx | |
+| `ServerException` | 5xx | `retryAfter` (seconds, when the API sent `Retry-After`) |
 | `TimeoutException` | No complete response within the timeout | `timeout` |
 | `ConnectionException` | The request failed (DNS, TLS, refused, reset) | |
 | `UnexpectedResponseException` | An empty or non-JSON body where JSON was expected, or an error page such as a proxy's HTML 502 | `status`, `bodyExcerpt` |

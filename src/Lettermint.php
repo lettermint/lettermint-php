@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lettermint;
 
+use Generator;
 use GuzzleHttp\ClientInterface;
 use JsonSerializable;
 use Lettermint\Exceptions\LettermintConfigException;
@@ -18,6 +19,7 @@ use Lettermint\Resources\Stats;
 use Lettermint\Resources\Suppressions;
 use Lettermint\Resources\Team;
 use Lettermint\Resources\Webhooks;
+use Lettermint\Types\AnalyticsPagination;
 use Lettermint\Types\AnalyticsResponse;
 use Lettermint\Types\BlockedFileTypes;
 
@@ -144,6 +146,26 @@ final class Lettermint implements JsonSerializable
     }
 
     /**
+     * Queries email analytics and follows `pagination.next_cursor`, yielding one
+     * whole response per request. Each response carries the next page of
+     * `data.breakdown` with its own `meta` and `pagination`. Needs the team token.
+     *
+     * A cursor expires 60 seconds after its response, so request the next page
+     * promptly; an expired cursor throws a ValidationException. The token is
+     * checked before the first page is requested; pages are requested only
+     * when the caller gets to them.
+     *
+     * @param  AnalyticsQuery  $query
+     * @return Generator<int, AnalyticsResponse, mixed, void>
+     */
+    public function analyticsPages(array $query): Generator
+    {
+        $this->transport->assertAuth('analyticsPages', 'team');
+
+        return $this->analyticsResponses($query);
+    }
+
+    /**
      * The file extensions and MIME types that cannot be attached. Needs the team token.
      */
     public function blockedFileTypes(): BlockedFileTypes
@@ -180,6 +202,31 @@ final class Lettermint implements JsonSerializable
     public function __serialize(): array
     {
         throw new LettermintConfigException('A Lettermint client cannot be serialized, because it holds API tokens. Create it where you use it, for example from the service container.');
+    }
+
+    /**
+     * @param  AnalyticsQuery  $query
+     * @return Generator<int, AnalyticsResponse, mixed, void>
+     */
+    private function analyticsResponses(array $query): Generator
+    {
+        $current = $query;
+        $seen = [];
+        if (is_string($query['cursor'] ?? null)) {
+            $seen[$query['cursor']] = true;
+        }
+        while (true) {
+            $page = $this->transport->object(AnalyticsResponse::class, 'POST /analytics', 'analyticsPages', json: $current);
+            yield $page;
+            $pagination = $page->pagination;
+            $next = $pagination instanceof AnalyticsPagination ? $pagination->next_cursor : null;
+            if (! is_string($next) || $next === '' || isset($seen[$next])) {
+                return;
+            }
+            $seen[$next] = true;
+            $current = $query;
+            $current['cursor'] = $next;
+        }
     }
 
     private static function checkBaseUrl(string $baseUrl): string

@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 use Lettermint\Lettermint;
+use Lettermint\Types\AnalyticsResponse;
 use Lettermint\Types\DomainListData;
 use Lettermint\Types\ListDomainsResponse;
 use Lettermint\Types\SendMailResponse;
@@ -32,6 +33,12 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     }
     foreach ($page as $item) {
         assertType(DomainListData::class, $item);
+    }
+
+    foreach ($lettermint->analyticsPages(['metrics' => ['delivered'], 'include' => ['breakdown'], 'group_by' => ['recipient_domain']]) as $analytics) {
+        assertType(AnalyticsResponse::class, $analytics);
+        assertType('list<Lettermint\Types\AnalyticsBreakdownRow>|null', $analytics->data->breakdown);
+        assertType('string|null', $analytics->pagination->next_cursor);
     }
 
     assertType('list<Lettermint\Types\DomainDnsRecordData>|null', $lettermint->domains->retrieve('d')->dns_records);

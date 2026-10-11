@@ -420,7 +420,7 @@ final class Transport
             $status === 409 => new ConflictException($status, $message, $code, $details, $body),
             $status === 422 => new ValidationException($status, $message, $code, $details, $body, $errors),
             $status === 429 => new RateLimitException($status, $message, $code, $details, $body, self::retryAfter($response->getHeaderLine('Retry-After'))),
-            $status >= 500 => new ServerException($status, $message, $code, $details, $body),
+            $status >= 500 => new ServerException($status, $message, $code, $details, $body, self::retryAfter($response->getHeaderLine('Retry-After'))),
             default => new ApiException($status, $message, $code, $details, $body),
         };
     }
