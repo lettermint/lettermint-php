@@ -2,6 +2,15 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 3.1.0 - 2026-10-11
+
+### What's Changed
+
+* docs: add the 2.8.0 and 3.0.0 changelog entries by @bjarn in https://github.com/lettermint/lettermint-php/pull/45
+* feat: add analyticsPages, retryAfter on server errors and the latest API types by @bjarn in https://github.com/lettermint/lettermint-php/pull/44
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/3.0.0...3.1.0
+
 ## 3.0.0 - 2026-10-04
 
 ### What's Changed
