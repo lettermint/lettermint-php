@@ -10,6 +10,7 @@ use Lettermint\Types\AnalyticsResponse;
 use Lettermint\Types\DomainListData;
 use Lettermint\Types\ListDomainsResponse;
 use Lettermint\Types\PendingSendMailResponse;
+use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\SendMailResponse;
 use Lettermint\Webhook;
 
@@ -51,5 +52,8 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     assertType(PendingSendMailResponse::class, $lettermint->messages->resend('m', ['recipients' => ['a@example.test']], 'k'));
     assertType('string|null', $lettermint->messages->retrieve('m')->resent_from_message_id);
     assertType('string|null', $lettermint->routes->retrieve('r')->inbound_route_domain);
+    assertType(RetryWebhookDeliveryResponse::class, $lettermint->webhooks->deliveries->retry('w', 'd'));
+    assertType('string', $lettermint->webhooks->deliveries->retry('w', 'd')->delivery_id);
+    assertType('string|null', $lettermint->webhooks->deliveries->retrieve('w', 'd')->next_retry_at);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }
