@@ -173,11 +173,13 @@ describe('single-token clients', function () {
             ->and($bothApi->last()->headers)->not->toHaveKey('authorization');
     });
 
-    it('lets reschedule and cancel use the sending token when no team token is set', function () {
+    it('lets reschedule, cancel and resend use the sending token when no team token is set', function () {
         $scheduled = ['message_id' => 'm', 'status' => 'scheduled', 'scheduled_at' => null];
         [$sendingOnly, $api] = client(fn () => json(200, $scheduled), ['teamToken' => null]);
         $sendingOnly->messages->cancel('m');
         $sendingOnly->messages->reschedule('m', ['scheduled_at' => '2026-10-05T09:00:00Z']);
+        $sendingOnly->messages->resend('m');
+        expect($api->requests)->toHaveCount(3);
         foreach ($api->requests as $request) {
             expect($request->headers['x-lettermint-token'])->toBe(SENDING_TOKEN)
                 ->and($request->headers)->not->toHaveKey('authorization');

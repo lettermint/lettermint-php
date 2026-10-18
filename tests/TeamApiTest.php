@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use GuzzleHttp\Psr7\Response;
 use Lettermint\ApiObject;
+use Lettermint\Exceptions\ApiException;
 use Lettermint\Exceptions\LettermintConfigException;
 use Lettermint\Exceptions\UnexpectedResponseException;
 use Lettermint\Lettermint;
@@ -12,6 +13,7 @@ use Lettermint\Types\DomainListData;
 use Lettermint\Types\MessageEventData;
 use Lettermint\Types\MessageListData;
 use Lettermint\Types\Operations;
+use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\ProjectListData;
 use Lettermint\Types\RouteData;
 use Lettermint\Types\RouteListData;
@@ -82,6 +84,7 @@ function operationCalls(): array
         'POST /domains/{domainId}/dns-records/{recordId}/verify' => fn (Lettermint $l) => $l->domains->verifyDnsRecord($ids['domainId'], $ids['recordId']),
         'POST /messages/{messageId}/cancel' => fn (Lettermint $l) => $l->messages->cancel($ids['messageId']),
         'POST /messages/{messageId}/process' => fn (Lettermint $l) => $l->messages->process($ids['messageId']),
+        'POST /messages/{messageId}/resend' => fn (Lettermint $l) => $l->messages->resend($ids['messageId']),
         'POST /projects' => fn (Lettermint $l) => $l->projects->create(['name' => 'Production']),
         'POST /projects/{projectId}/report-forwarding/resend-code' => fn (Lettermint $l) => $l->projects->reportForwarding->resendCode($ids['projectId']),
         'POST /projects/{projectId}/report-forwarding/verify' => fn (Lettermint $l) => $l->projects->reportForwarding->verify($ids['projectId'], ['code' => '123456']),
@@ -127,7 +130,7 @@ describe('operation coverage', function () {
         sort($calls);
         sort($operations);
         expect($calls)->toBe($operations)
-            ->and($operations)->toHaveCount(58);
+            ->and($operations)->toHaveCount(59);
     });
 
     it('calls the operation with the right method, path, token and result type', function (string $key) {
@@ -180,6 +183,41 @@ describe('request bodies and options', function () {
         $lettermint->messages->process('m');
         expect($api->requests[0]->headers['idempotency-key'])->toBe('process-1')
             ->and($api->requests[1]->headers)->not->toHaveKey('idempotency-key');
+    });
+
+    it('resends a message to every or to chosen recipients', function () {
+        [$lettermint, $api] = client(fn () => json(202, ['message_id' => 'resent-1', 'status' => 'pending']));
+        $result = $lettermint->messages->resend('message/id');
+        expect($result)->toBeInstanceOf(PendingSendMailResponse::class)
+            ->and($result->message_id)->toBe('resent-1')
+            ->and($result->status)->toBe('pending')
+            ->and($api->last()->method)->toBe('POST')
+            ->and($api->last()->url)->toBe(BASE_URL.'/messages/message%2Fid/resend')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->rawBody)->toBe('{}')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key');
+        $lettermint->messages->resend('message/id', ['recipients' => ['jane@example.com']]);
+        expect($api->last()->rawBody)->toBe('{"recipients":["jane@example.com"]}');
+    });
+
+    it('sends an Idempotency-Key for resending a message', function () {
+        [$lettermint, $api] = client(fn () => json(202, ['message_id' => 'resent-1', 'status' => 'pending']));
+        $lettermint->messages->resend('m', idempotencyKey: 'resend-1');
+        $lettermint->messages->resend('m', ['recipients' => ['jane@example.com']], 'resend-2');
+        expect($api->requests[0]->headers['idempotency-key'])->toBe('resend-1')
+            ->and($api->requests[0]->rawBody)->toBe('{}')
+            ->and($api->requests[1]->headers['idempotency-key'])->toBe('resend-2')
+            ->and($api->requests[1]->json())->toBe(['recipients' => ['jane@example.com']]);
+    });
+
+    it('throws an ApiException when the content of a message to resend is gone', function () {
+        [$lettermint] = client(fn () => json(410, ['error' => ['code' => 'MESSAGE_CONTENT_UNAVAILABLE', 'message' => 'The content of this message is no longer retained.']]));
+        $error = thrown(fn () => $lettermint->messages->resend('m'));
+        expect($error::class)->toBe(ApiException::class)
+            ->and($error->status)->toBe(410)
+            ->and($error->errorCode)->toBe('MESSAGE_CONTENT_UNAVAILABLE')
+            ->and($error->getMessage())->toBe('The content of this message is no longer retained.');
     });
 
     it('keeps the webhook basic-auth state', function (array $state) {
