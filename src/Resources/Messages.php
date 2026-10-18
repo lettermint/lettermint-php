@@ -10,16 +10,18 @@ use Lettermint\Types\ListMessagesResponse;
 use Lettermint\Types\MessageData;
 use Lettermint\Types\MessageEventData;
 use Lettermint\Types\MessageListData;
+use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\ProcessInboundMessageResponse;
 use Lettermint\Types\ScheduledMessage;
 
 /**
- * Sent and received messages. Needs the team token; reschedule() and cancel()
- * also accept the sending token when no team token is configured.
+ * Sent and received messages. Needs the team token; reschedule(), cancel() and
+ * resend() also accept the sending token when no team token is configured.
  *
  * @phpstan-import-type ListMessagesQuery from \Lettermint\Types\ApiTypes
  * @phpstan-import-type ListMessageEventsQuery from \Lettermint\Types\ApiTypes
  * @phpstan-import-type RescheduleMessageRequest from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type ResendMessageRequest from \Lettermint\Types\ApiTypes
  */
 final class Messages extends Resource
 {
@@ -120,5 +122,19 @@ final class Messages extends Resource
     public function process(string $messageId, ?string $idempotencyKey = null): ProcessInboundMessageResponse
     {
         return $this->transport->object(ProcessInboundMessageResponse::class, 'POST /messages/{messageId}/process', 'messages.process', ['messageId' => $messageId], idempotencyKey: $idempotencyKey);
+    }
+
+    /**
+     * Sends the stored content of a sent message again, as a new message with
+     * its own ID. Leave out `recipients` to resend to every original
+     * recipient. A message can be resent while its content is retained (HTTP
+     * 410 once it is not), at most 5 times in 24 hours.
+     *
+     * @param  ResendMessageRequest  $body
+     * @param  string|null  $idempotencyKey  Sent as the `Idempotency-Key` header of this call only.
+     */
+    public function resend(string $messageId, array $body = [], ?string $idempotencyKey = null): PendingSendMailResponse
+    {
+        return $this->transport->object(PendingSendMailResponse::class, 'POST /messages/{messageId}/resend', 'messages.resend', ['messageId' => $messageId], json: $body, idempotencyKey: $idempotencyKey);
     }
 }

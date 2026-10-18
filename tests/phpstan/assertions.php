@@ -9,6 +9,7 @@ use Lettermint\Lettermint;
 use Lettermint\Types\AnalyticsResponse;
 use Lettermint\Types\DomainListData;
 use Lettermint\Types\ListDomainsResponse;
+use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\SendMailResponse;
 use Lettermint\Webhook;
 
@@ -43,6 +44,8 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
 
     assertType('list<Lettermint\Types\DomainDnsRecordData>|null', $lettermint->domains->retrieve('d')->dns_records);
     assertType('string', $lettermint->messages->html('m'));
+    assertType(PendingSendMailResponse::class, $lettermint->messages->resend('m', ['recipients' => ['a@example.test']], 'k'));
+    assertType('string|null', $lettermint->messages->retrieve('m')->resent_from_message_id);
     assertType('string|null', $lettermint->routes->retrieve('r')->inbound_route_domain);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }

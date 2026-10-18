@@ -58,7 +58,7 @@ $lettermint = new Lettermint(
 );
 ```
 
-Each part uses its own token and never falls back to the other one. If the token a method needs is missing, the method throws a `LettermintConfigException` that names the argument (`domains.list needs teamToken; …`) before any request. `$lettermint->ping()` uses the team token when it is set, otherwise the sending token. `messages->reschedule()` and `messages->cancel()` accept either token in the same way.
+Each part uses its own token and never falls back to the other one. If the token a method needs is missing, the method throws a `LettermintConfigException` that names the argument (`domains.list needs teamToken; …`) before any request. `$lettermint->ping()` uses the team token when it is set, otherwise the sending token. `messages->reschedule()`, `messages->cancel()` and `messages->resend()` accept either token in the same way.
 
 You can also pass a single token as the first argument. The SDK chooses its type by the format: `lm_team_` followed by letters and digits is a team token, and `lm_` followed by letters and digits is a sending token. Any other value, such as an SSO verification token (`lm_sso_…`) or an empty string, throws a `LettermintConfigException`; pass `sendingToken:` or `teamToken:` explicitly in that case.
 
@@ -185,6 +185,17 @@ $lettermint->messages->reschedule($result->message_id, ['scheduled_at' => '2026-
 $lettermint->messages->cancel($result->message_id);
 ```
 
+### Resending
+
+`messages->resend()` sends the stored content of a sent message again, as a new message with its own ID. Leave out `recipients` to resend to every original recipient. A message can be resent while its content is retained (the API answers 410 once it is not), at most 5 times in 24 hours.
+
+```php
+$resent = $lettermint->messages->resend($messageId);
+$resent = $lettermint->messages->resend($messageId, ['recipients' => ['jane@example.com']], idempotencyKey: "resend-{$messageId}");
+
+echo $resent->message_id; // the new message
+```
+
 ### Sandbox
 
 In a Sandbox project, nothing is delivered. Choose the simulated result per email:
@@ -247,7 +258,7 @@ $html = $lettermint->messages->html('message-id');
 | Property | Methods |
 | --- | --- |
 | `domains` | `list`, `iterate`, `create`, `retrieve`, `delete`, `verifyDnsRecords`, `verifyDnsRecord`, `updateProjects` |
-| `messages` | `list`, `iterate`, `retrieve`, `events`, `iterateEvents`, `source`, `html`, `text`, `reschedule`, `cancel`, `process` |
+| `messages` | `list`, `iterate`, `retrieve`, `events`, `iterateEvents`, `source`, `html`, `text`, `reschedule`, `cancel`, `resend`, `process` |
 | `projects` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `rotateToken` |
 | `projects->reportForwarding` | `retrieve`, `update`, `delete`, `verify`, `resendCode` |
 | `routes` | `list($projectId)`, `iterate($projectId)`, `create($projectId, …)`, `retrieve`, `update`, `delete`, `verifyInboundDomain` |
