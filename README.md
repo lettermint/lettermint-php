@@ -123,6 +123,7 @@ Builder methods:
 | `settings(['track_opens' => …, 'track_clicks' => …, 'tls' => …])` | Per-email settings that override the route. |
 | `sandboxResult($result)` | The result a Sandbox project simulates. |
 | `attach($attachment)` | Adds an `Attachment`, or an array in the API's format. |
+| `idempotencyKey($key)` | The email's idempotency key in `sendBatch()` (1 to 255 characters). `send()` rejects a builder with one; use `send(idempotencyKey: …)`. `null` removes it. |
 | `send(idempotencyKey: …)` | Sends the email. The builder can be sent again. |
 | `build()` | Returns the message in the API's format. |
 
@@ -153,6 +154,17 @@ $results = $lettermint->emails->sendBatch([
     $welcome->to('john@example.com')->html('<p>Hi John</p>'),
 ]);
 ```
+
+Give each email an `idempotency_key` (1 to 255 characters, unique within the batch) to retry a batch safely. If an email with the same key and content was accepted in the last 24 hours, the API returns its original result and does not send it again. Reusing a key with different content rejects the whole batch with a `ConflictException` (`IDEMPOTENCY_CONFLICT`), and nothing is sent:
+
+```php
+$results = $lettermint->emails->sendBatch([
+    ['from' => 'hello@acme.com', 'to' => ['jane@example.com'], 'subject' => 'Hi Jane', 'text' => 'Hello', 'idempotency_key' => 'welcome-jane'],
+    $welcome->to('john@example.com')->html('<p>Hi John</p>')->idempotencyKey('welcome-john'),
+]);
+```
+
+Emails are accepted in order. When one fails, the emails before it may already be accepted. The `ApiException` then lists them in `$e->details['accepted']`, each with its `index` in the batch and its `message_id`.
 
 ### Idempotency
 

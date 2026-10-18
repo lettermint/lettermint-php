@@ -28,6 +28,7 @@ use Lettermint\Types\SendMailResponse;
  * ```
  *
  * @phpstan-import-type SendMailRequest from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type SendBatchMailItem from \Lettermint\Types\ApiTypes
  * @phpstan-import-type SendMailRequestSettings from \Lettermint\Types\ApiTypes
  * @phpstan-import-type MessageTagInput from \Lettermint\Types\ApiTypes
  * @phpstan-import-type MessageAttachmentInput from \Lettermint\Types\ApiTypes
@@ -36,10 +37,12 @@ final class EmailBuilder implements JsonSerializable
 {
     /**
      * @param  array<string, mixed>  $message  The message in the API's format.
+     * @param  string|null  $idempotencyKey  The per-email key for sendBatch(); not part of the message.
      */
     private function __construct(
         private readonly Emails $emails,
         private readonly array $message,
+        private readonly ?string $idempotencyKey = null,
     ) {}
 
     /**
@@ -208,6 +211,19 @@ final class EmailBuilder implements JsonSerializable
     }
 
     /**
+     * The idempotency key of this email in `$lettermint->emails->sendBatch()`,
+     * sent as the email's `idempotency_key` (1 to 255 characters, unique within
+     * the batch). `null` removes it. It is not part of build(), and send()
+     * rejects a builder with one: pass send(idempotencyKey: ...) instead.
+     */
+    public function idempotencyKey(?string $key): self
+    {
+        MessageValidator::batchIdempotencyKey($key);
+
+        return new self($this->emails, $this->message, $key);
+    }
+
+    /**
      * The message in the API's format.
      *
      * @return SendMailRequest
@@ -219,12 +235,34 @@ final class EmailBuilder implements JsonSerializable
     }
 
     /**
+     * @internal The message as a sendBatch() item, with the idempotencyKey().
+     *
+     * @return SendBatchMailItem
+     */
+    public function batchItem(): array
+    {
+        $item = $this->message;
+        if ($this->idempotencyKey !== null) {
+            $item['idempotency_key'] = $this->idempotencyKey;
+        }
+
+        /** @var SendBatchMailItem */
+        return $item;
+    }
+
+    /**
      * Sends this email. The builder stays unchanged and can be sent again.
      *
      * @param  string|null  $idempotencyKey  Sent as the `Idempotency-Key` header of this call only.
+     *
+     * @throws LettermintValidationException When the builder has an idempotencyKey(), which only sendBatch() uses.
      */
     public function send(?string $idempotencyKey = null): SendMailResponse
     {
+        if ($this->idempotencyKey !== null) {
+            throw new LettermintValidationException('idempotencyKey() applies to sendBatch() only. Pass send(idempotencyKey: ...) to send one email idempotently.', 'idempotency_key');
+        }
+
         return $this->emails->send($this->build(), $idempotencyKey);
     }
 
@@ -243,7 +281,9 @@ final class EmailBuilder implements JsonSerializable
      */
     public function __debugInfo(): array
     {
-        return ['message' => $this->message];
+        return $this->idempotencyKey === null
+            ? ['message' => $this->message]
+            : ['message' => $this->message, 'idempotencyKey' => $this->idempotencyKey];
     }
 
     /**
@@ -274,6 +314,6 @@ final class EmailBuilder implements JsonSerializable
         }
         MessageValidator::message($message);
 
-        return new self($this->emails, $message);
+        return new self($this->emails, $message, $this->idempotencyKey);
     }
 }

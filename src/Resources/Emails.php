@@ -17,6 +17,7 @@ use Lettermint\Types\SendMailResponse;
  * workers (Octane, Horizon, Messenger).
  *
  * @phpstan-import-type SendMailRequest from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type SendBatchMailItem from \Lettermint\Types\ApiTypes
  */
 final class Emails extends Resource
 {
@@ -37,8 +38,19 @@ final class Emails extends Resource
     /**
      * Sends up to 500 emails in one request. Accepts messages and builders.
      *
-     * @param  list<SendMailRequest|EmailBuilder>  $messages
-     * @param  string|null  $idempotencyKey  Sent as the `Idempotency-Key` header of this call only.
+     * Give each email an `idempotency_key` (or a builder an idempotencyKey()),
+     * 1 to 255 characters and unique within the batch, to retry a batch
+     * safely: the API returns the original result of every email it already
+     * accepted with the same key and content in the last 24 hours, and sends
+     * only the rest. Reusing a key with different content rejects the whole
+     * batch with a ConflictException (`IDEMPOTENCY_CONFLICT`).
+     *
+     * Emails are accepted in order. When one fails, the emails before it may
+     * already be accepted; the ApiException then lists them in
+     * `details['accepted']`, with their `index` in the batch and `message_id`.
+     *
+     * @param  list<SendBatchMailItem|EmailBuilder>  $messages
+     * @param  string|null  $idempotencyKey  Sent as the `Idempotency-Key` header of this call only; applies to the whole request.
      * @return list<SendMailResponse> One result per message, in order.
      */
     public function sendBatch(array $messages, ?string $idempotencyKey = null): array
@@ -50,7 +62,7 @@ final class Emails extends Resource
         $body = [];
         foreach ($messages as $index => $message) {
             if ($message instanceof EmailBuilder) {
-                $body[] = $message->build();
+                $body[] = $message->batchItem();
 
                 continue;
             }
@@ -65,7 +77,7 @@ final class Emails extends Resource
      * Starts an immutable email builder. Every setter returns a new builder.
      * Pass a message to start from it.
      *
-     * @param  SendMailRequest|array{}  $message
+     * @param  SendMailRequest|SendBatchMailItem|array{}  $message
      */
     public function compose(array $message = []): EmailBuilder
     {
