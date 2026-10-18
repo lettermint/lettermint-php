@@ -23,6 +23,8 @@ final class MessageValidator
 
     private const HEADER_VALUE = '/\A[^\r\n\0]+\z/';
 
+    private const BATCH_IDEMPOTENCY_KEY = '/\A.{1,255}\z/su';
+
     /**
      * @param  string  $prefix  The field prefix for messages in a batch, e.g. `messages[2]`.
      *
@@ -53,6 +55,16 @@ final class MessageValidator
                     self::fail($field, 'Attachment content must be a base64-encoded string. Use the builder\'s attach() or Attachment::fromBytes(...)->toArray() for raw bytes.');
                 }
             }
+        }
+    }
+
+    /**
+     * The per-email idempotency key that EmailBuilder::idempotencyKey() sets.
+     */
+    public static function batchIdempotencyKey(?string $key): void
+    {
+        if ($key !== null && preg_match(self::BATCH_IDEMPOTENCY_KEY, $key) !== 1) {
+            self::fail('idempotency_key', 'The idempotency key of an email must be 1 to 255 characters.');
         }
     }
 

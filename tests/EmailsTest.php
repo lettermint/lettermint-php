@@ -5,6 +5,8 @@ declare(strict_types=1);
 use GuzzleHttp\Psr7\Response;
 use Lettermint\Attachment;
 use Lettermint\EmailBuilder;
+use Lettermint\Exceptions\ApiException;
+use Lettermint\Exceptions\ConflictException;
 use Lettermint\Exceptions\LettermintValidationException;
 use Lettermint\Exceptions\ServerException;
 use Lettermint\Exceptions\UnexpectedResponseException;
@@ -129,6 +131,86 @@ describe('emails->sendBatch', function () {
         expect($error)->toBeInstanceOf(LettermintValidationException::class)
             ->and($error->field)->toBe('messages[1].tags')
             ->and($api->requests)->toBeEmpty();
+    });
+
+    it('sends per-email idempotency keys from arrays and builders next to the batch key', function () {
+        [$lettermint, $api] = client(fn () => json(202, [
+            ['message_id' => 'm1', 'status' => 'pending'],
+            ['message_id' => 'm2', 'status' => 'pending'],
+            ['message_id' => 'm3', 'status' => 'pending'],
+        ]));
+        $first = ['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'One', 'idempotency_key' => 'welcome-b'];
+        $base = $lettermint->emails->compose()->from('a@example.test')->subject('Two');
+        $second = $base->to('c@example.test')->idempotencyKey('welcome-c');
+        $third = $second->to('d@example.test')->idempotencyKey(null);
+        $lettermint->emails->sendBatch([$first, $second, $third], idempotencyKey: 'batch-1');
+        expect($api->last()->json())->toBe([
+            $first,
+            ['from' => 'a@example.test', 'to' => ['c@example.test'], 'subject' => 'Two', 'idempotency_key' => 'welcome-c'],
+            ['from' => 'a@example.test', 'to' => ['d@example.test'], 'subject' => 'Two'],
+        ])
+            ->and($api->last()->headers['idempotency-key'])->toBe('batch-1')
+            ->and($second->build())->toBe(['from' => 'a@example.test', 'to' => ['c@example.test'], 'subject' => 'Two'])
+            ->and($second->subject('Changed')->batchItem()['idempotency_key'] ?? null)->toBe('welcome-c')
+            ->and($base->batchItem())->not->toHaveKey('idempotency_key');
+    });
+
+    it('rejects a builder idempotency key that is empty or longer than 255 characters', function (string $key) {
+        [$lettermint] = sendingClient();
+        $builder = $lettermint->emails->compose()->from('a@example.test');
+        $error = thrown(fn () => $builder->idempotencyKey($key));
+        expect($error)->toBeInstanceOf(LettermintValidationException::class)
+            ->and($error->field)->toBe('idempotency_key')
+            ->and($builder->batchItem())->not->toHaveKey('idempotency_key');
+    })->with(['empty' => [''], 'too long' => [str_repeat('k', 256)]]);
+
+    it('accepts a builder idempotency key of 255 characters', function () {
+        [$lettermint, $api] = client(fn () => json(202, [['message_id' => 'm1', 'status' => 'pending']]));
+        $key = str_repeat('é', 255);
+        $lettermint->emails->sendBatch([$lettermint->emails->compose()->from('a@example.test')->to('b@example.test')->subject('x')->idempotencyKey($key)]);
+        expect($api->last()->json()[0]['idempotency_key'])->toBe($key);
+    });
+
+    it('passes per-email idempotency keys in arrays through for the API to validate', function () {
+        [$lettermint, $api] = client(fn () => json(202, [['message_id' => 'm1', 'status' => 'pending'], ['message_id' => 'm2', 'status' => 'pending']]));
+        $messages = [
+            ['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'One', 'idempotency_key' => 'same'],
+            ['from' => 'a@example.test', 'to' => ['c@example.test'], 'subject' => 'Two', 'idempotency_key' => 'same'],
+        ];
+        $lettermint->emails->sendBatch($messages);
+        expect($api->last()->json())->toBe($messages);
+    });
+
+    it('does not send the builder idempotency key with a single send', function () {
+        [$lettermint, $api] = sendingClient();
+        $builder = $lettermint->emails->compose()->from('a@example.test')->to('b@example.test')->subject('x')->idempotencyKey('k1');
+        $error = thrown(fn () => $builder->send());
+        expect($error)->toBeInstanceOf(LettermintValidationException::class)
+            ->and($error->field)->toBe('idempotency_key')
+            ->and($api->requests)->toBeEmpty();
+        $lettermint->emails->send($builder->build(), idempotencyKey: 'single-1');
+        $builder->idempotencyKey(null)->send();
+        expect($api->requests[0]->json())->toBe(['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x'])
+            ->and($api->requests[0]->headers['idempotency-key'])->toBe('single-1')
+            ->and($api->requests[1]->json())->toBe(['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x'])
+            ->and($api->requests[1]->headers)->not->toHaveKey('idempotency-key');
+    });
+
+    it('exposes the emails accepted before a batch failed and idempotency conflicts', function () {
+        $accepted = [['index' => 0, 'message_id' => 'm1']];
+        [$lettermint] = client(fn (RecordedRequest $request, int $index) => $index === 0
+            ? json(422, ['error' => ['code' => 'VALIDATION_ERROR', 'message' => 'The email at index 1 is invalid.', 'details' => ['accepted' => $accepted]]])
+            : json(409, ['error' => ['code' => 'IDEMPOTENCY_CONFLICT', 'message' => 'The idempotency key was used with a different request.']]));
+        $messages = [
+            ['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'One', 'idempotency_key' => 'k1'],
+            ['from' => 'a@example.test', 'to' => ['c@example.test'], 'subject' => 'Two', 'idempotency_key' => 'k2'],
+        ];
+        $error = thrown(fn () => $lettermint->emails->sendBatch($messages));
+        expect($error)->toBeInstanceOf(ApiException::class)
+            ->and($error->details)->toBe(['accepted' => $accepted]);
+        $conflict = thrown(fn () => $lettermint->emails->sendBatch($messages));
+        expect($conflict)->toBeInstanceOf(ConflictException::class)
+            ->and($conflict->errorCode)->toBe('IDEMPOTENCY_CONFLICT');
     });
 
     it('requires a JSON list in the response', function () {

@@ -23,6 +23,10 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     assertType('string', $sent->status);
     assertType('string|null', $sent->scheduled_at);
     assertType('list<Lettermint\Types\SendMailResponse>', $lettermint->emails->sendBatch([]));
+    assertType('list<Lettermint\Types\SendMailResponse>', $lettermint->emails->sendBatch([
+        ['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'Hi', 'idempotency_key' => 'k1'],
+        $lettermint->emails->compose()->from('a@example.test')->idempotencyKey('k2'),
+    ], idempotencyKey: 'batch'));
     assertType(SendMailResponse::class, $lettermint->emails->compose()->from('a@example.test')->send(idempotencyKey: 'k'));
 
     $page = $lettermint->domains->list(['page' => ['size' => 30], 'filter' => ['status' => 'verified'], 'sort' => ['-created_at']]);
