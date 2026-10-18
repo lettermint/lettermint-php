@@ -35,7 +35,7 @@ use Lettermint\ApiObject;
  * @property-read list<SpamSymbol>|null $spam_symbols Optional. Detailed rules that contributed to the spam assessment. Available on plans with Spam Insights in individual-message responses.
  * @property-read string $route_id
  * @property-read string $created_at
- * @property-read string|null $resent_from_message_id The ID of the message this message resent. Null when it is not a resend.
+ * @property-read string|null $resent_from_message_id Optional. The ID of the message this message resent. Null when it is not a resend.
  */
 final class MessageData extends ApiObject
 {
