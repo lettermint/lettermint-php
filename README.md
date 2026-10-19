@@ -279,8 +279,10 @@ $html = $lettermint->messages->html('message-id');
 | `team` | `retrieve`, `update`, `usage`, `roles` |
 | `team->members` | `list`, `iterate`, `retrieve`, `updateAssignment` |
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
-| `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)` |
+| `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)`, `retry($webhookId, $deliveryId)` |
 | (root) | `ping`, `analytics`, `analyticsPages`, `blockedFileTypes` |
+
+`webhooks->deliveries->retry()` sends a delivery's original payload to the webhook again now; when the delivery cannot be retried, it throws a `ConflictException` whose `errorCode` says why.
 
 ### Responses
 

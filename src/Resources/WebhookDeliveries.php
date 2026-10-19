@@ -6,6 +6,7 @@ namespace Lettermint\Resources;
 
 use Generator;
 use Lettermint\Types\ListWebhookDeliveriesResponse;
+use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\WebhookDeliveryData;
 use Lettermint\Types\WebhookDeliveryListData;
 
@@ -40,5 +41,15 @@ final class WebhookDeliveries extends Resource
     public function retrieve(string $webhookId, string $deliveryId): WebhookDeliveryData
     {
         return $this->transport->object(WebhookDeliveryData::class, 'GET /webhooks/{webhookId}/deliveries/{deliveryId}', 'webhooks.deliveries.retrieve', ['webhookId' => $webhookId, 'deliveryId' => $deliveryId]);
+    }
+
+    /**
+     * Sends the delivery's original payload to the webhook again now. The retry
+     * counts as a delivery attempt; if it fails with a retryable error, the
+     * automatic retries continue.
+     */
+    public function retry(string $webhookId, string $deliveryId): RetryWebhookDeliveryResponse
+    {
+        return $this->transport->object(RetryWebhookDeliveryResponse::class, 'POST /webhooks/{webhookId}/deliveries/{deliveryId}/retry', 'webhooks.deliveries.retry', ['webhookId' => $webhookId, 'deliveryId' => $deliveryId]);
     }
 }

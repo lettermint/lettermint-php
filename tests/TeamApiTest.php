@@ -5,6 +5,7 @@ declare(strict_types=1);
 use GuzzleHttp\Psr7\Response;
 use Lettermint\ApiObject;
 use Lettermint\Exceptions\ApiException;
+use Lettermint\Exceptions\ConflictException;
 use Lettermint\Exceptions\LettermintConfigException;
 use Lettermint\Exceptions\UnexpectedResponseException;
 use Lettermint\Lettermint;
@@ -15,11 +16,13 @@ use Lettermint\Types\MessageListData;
 use Lettermint\Types\Operations;
 use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\ProjectListData;
+use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\RouteData;
 use Lettermint\Types\RouteListData;
 use Lettermint\Types\SendMailResponse;
 use Lettermint\Types\SuppressedRecipientData;
 use Lettermint\Types\TeamMemberData;
+use Lettermint\Types\WebhookDeliveryData;
 use Lettermint\Types\WebhookDeliveryListData;
 use Lettermint\Types\WebhookListData;
 
@@ -95,6 +98,7 @@ function operationCalls(): array
         'POST /send/batch' => fn (Lettermint $l) => $l->emails->sendBatch([['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x']]),
         'POST /suppressions' => fn (Lettermint $l) => $l->suppressions->create(['reason' => 'manual', 'scope' => 'team', 'emails' => ['blocked@example.test']]),
         'POST /webhooks' => fn (Lettermint $l) => $l->webhooks->create(['name' => 'Hook', 'url' => 'https://example.test/hook', 'events' => ['message.sent']]),
+        'POST /webhooks/{webhookId}/deliveries/{deliveryId}/retry' => fn (Lettermint $l) => $l->webhooks->deliveries->retry($ids['webhookId'], $ids['deliveryId']),
         'POST /webhooks/{webhookId}/regenerate-secret' => fn (Lettermint $l) => $l->webhooks->regenerateSecret($ids['webhookId']),
         'POST /webhooks/{webhookId}/test' => fn (Lettermint $l) => $l->webhooks->test($ids['webhookId']),
         'PUT /domains/{domainId}/projects' => fn (Lettermint $l) => $l->domains->updateProjects($ids['domainId'], ['project_ids' => ['p']]),
@@ -130,7 +134,7 @@ describe('operation coverage', function () {
         sort($calls);
         sort($operations);
         expect($calls)->toBe($operations)
-            ->and($operations)->toHaveCount(59);
+            ->and($operations)->toHaveCount(60);
     });
 
     it('calls the operation with the right method, path, token and result type', function (string $key) {
@@ -218,6 +222,42 @@ describe('request bodies and options', function () {
             ->and($error->status)->toBe(410)
             ->and($error->errorCode)->toBe('MESSAGE_CONTENT_UNAVAILABLE')
             ->and($error->getMessage())->toBe('The content of this message is no longer retained.');
+    });
+
+    it('retries a webhook delivery without a body', function () {
+        [$lettermint, $api] = client(fn () => json(202, ['message' => 'The delivery is being retried.', 'delivery_id' => 'delivery/1']));
+        $result = $lettermint->webhooks->deliveries->retry('webhook/1', 'delivery/1');
+        expect($result)->toBeInstanceOf(RetryWebhookDeliveryResponse::class)
+            ->and($result->message)->toBe('The delivery is being retried.')
+            ->and($result->delivery_id)->toBe('delivery/1')
+            ->and($api->last()->method)->toBe('POST')
+            ->and($api->last()->url)->toBe(BASE_URL.'/webhooks/webhook%2F1/deliveries/delivery%2F1/retry')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->headers)->not->toHaveKey('content-type')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key')
+            ->and($api->last()->rawBody)->toBe('');
+    });
+
+    it('throws a ConflictException when a webhook delivery cannot be retried', function () {
+        [$lettermint] = client(fn () => json(409, ['error' => ['code' => 'WEBHOOK_DELIVERY_NOT_RETRYABLE', 'message' => 'This delivery cannot be retried.']]));
+        $error = thrown(fn () => $lettermint->webhooks->deliveries->retry('w', 'd'));
+        expect($error::class)->toBe(ConflictException::class)
+            ->and($error)->toBeInstanceOf(ApiException::class)
+            ->and($error->status)->toBe(409)
+            ->and($error->errorCode)->toBe('WEBHOOK_DELIVERY_NOT_RETRYABLE')
+            ->and($error->getMessage())->toBe('This delivery cannot be retried.');
+    });
+
+    it('reads when the next automatic retry of a delivery is due', function () {
+        [$lettermint] = client(fn () => json(200, ['id' => 'd1', 'next_retry_at' => '2026-10-18T12:00:00+00:00']));
+        $delivery = $lettermint->webhooks->deliveries->retrieve('w', 'd1');
+        expect($delivery)->toBeInstanceOf(WebhookDeliveryData::class)
+            ->and($delivery->next_retry_at)->toBe('2026-10-18T12:00:00+00:00');
+        $none = WebhookDeliveryData::from(['id' => 'd2', 'next_retry_at' => null]);
+        expect($none->next_retry_at)->toBeNull()
+            ->and($none->has('next_retry_at'))->toBeTrue()
+            ->and(WebhookDeliveryListData::from(['id' => 'd3'])->next_retry_at)->toBeNull();
     });
 
     it('keeps the webhook basic-auth state', function (array $state) {
@@ -410,6 +450,10 @@ describe('path parameters', function () {
             ->toThrow(LettermintConfigException::class, 'domains.retrieve: domainId must be a non-empty string other than "." and "..".')
             ->and(fn () => $lettermint->webhooks->deliveries->retrieve('w', $id))
             ->toThrow(LettermintConfigException::class, 'webhooks.deliveries.retrieve: deliveryId')
+            ->and(fn () => $lettermint->webhooks->deliveries->retry($id, 'd'))
+            ->toThrow(LettermintConfigException::class, 'webhooks.deliveries.retry: webhookId')
+            ->and(fn () => $lettermint->webhooks->deliveries->retry('w', $id))
+            ->toThrow(LettermintConfigException::class, 'webhooks.deliveries.retry: deliveryId')
             ->and(fn () => $lettermint->routes->iterate($id))
             ->toThrow(LettermintConfigException::class, 'routes.iterate: projectId')
             ->and($api->requests)->toBeEmpty();
