@@ -70,5 +70,7 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     assertType('string|null', $role->description);
     assertType(TeamRoleData::class, $lettermint->team->duplicateRole('r', ['name' => 'Copy']));
     assertType('string', $lettermint->team->deleteRole('r', ['replacement_role_id' => 'r2'])->message);
+    assertType('string', $lettermint->team->members->remove('u')->message);
+    assertType('list<Lettermint\Types\TeamMemberData>', $lettermint->team->members->list(['filter' => ['project_id' => 'p']])->data);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }
