@@ -12,6 +12,7 @@ use Lettermint\Types\ListDomainsResponse;
 use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\SendMailResponse;
+use Lettermint\Types\TeamInviteData;
 use Lettermint\Webhook;
 
 use function PHPStan\Testing\assertType;
@@ -55,5 +56,13 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     assertType(RetryWebhookDeliveryResponse::class, $lettermint->webhooks->deliveries->retry('w', 'd'));
     assertType('string', $lettermint->webhooks->deliveries->retry('w', 'd')->delivery_id);
     assertType('string|null', $lettermint->webhooks->deliveries->retrieve('w', 'd')->next_retry_at);
+    $invite = $lettermint->team->invites->create(['email' => 'a@example.test', 'role_id' => 'r', 'project_access' => ['scope' => 'selected', 'project_ids' => ['p']]]);
+    assertType(TeamInviteData::class, $invite);
+    assertType('string', $invite->role->name);
+    assertType('list<Lettermint\Types\TeamInviteData>', $lettermint->team->invites->list(['page' => ['size' => 10]])->data);
+    foreach ($lettermint->team->invites->iterate() as $pending) {
+        assertType(TeamInviteData::class, $pending);
+    }
+    assertType('string', $lettermint->team->invites->revoke('i')->message);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }

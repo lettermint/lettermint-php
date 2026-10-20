@@ -21,6 +21,9 @@ final class Team extends Resource
     /** Team members. */
     public readonly TeamMembers $members;
 
+    /** Pending team invitations. */
+    public readonly TeamInvites $invites;
+
     /**
      * @internal Use $lettermint->team.
      */
@@ -28,6 +31,7 @@ final class Team extends Resource
     {
         parent::__construct($transport);
         $this->members = new TeamMembers($transport);
+        $this->invites = new TeamInvites($transport);
     }
 
     /**

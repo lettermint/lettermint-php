@@ -172,7 +172,7 @@ final class Transport
         if ($cursorParam === null) {
             throw new \LogicException("{$key} is not cursor-paginated.");
         }
-        $this->useTeamToken($label, $operation['auth']);
+        $this->useTeamToken($label, self::auth($key));
         $this->path($operation['path'], $label, $path);
 
         return $this->pages($class, $key, $label, $path, $query, $cursorParam);
@@ -235,7 +235,7 @@ final class Transport
     private function send(string $key, string $label, array $path, array $query, ?array $json, ?string $idempotencyKey, ?string $auth): array
     {
         $operation = Operations::ALL[$key];
-        $useTeam = $this->useTeamToken($label, $auth ?? $operation['auth']);
+        $useTeam = $this->useTeamToken($label, $auth ?? self::auth($key));
         $url = $this->baseUrl.$this->path($operation['path'], $label, $path);
         $queryString = Query::serialize($query);
         if ($queryString !== '') {
@@ -287,6 +287,23 @@ final class Transport
         }
 
         return $this->decode($operation['response']['type'], $label, $response, $text);
+    }
+
+    /**
+     * The token that an operation of the generated table accepts. PHPStan does
+     * not keep the literal type of a constant array as large as the table, so
+     * the value is narrowed here.
+     *
+     * @return 'either'|'sending'|'team'
+     */
+    private static function auth(string $key): string
+    {
+        return match (Operations::ALL[$key]['auth']) {
+            'either' => 'either',
+            'sending' => 'sending',
+            'team' => 'team',
+            default => throw new \LogicException("{$key} has an unknown auth value."),
+        };
     }
 
     /**
