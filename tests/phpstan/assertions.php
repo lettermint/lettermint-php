@@ -13,6 +13,7 @@ use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\SendMailResponse;
 use Lettermint\Types\TeamInviteData;
+use Lettermint\Types\TeamRoleData;
 use Lettermint\Webhook;
 
 use function PHPStan\Testing\assertType;
@@ -64,5 +65,10 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
         assertType(TeamInviteData::class, $pending);
     }
     assertType('string', $lettermint->team->invites->revoke('i')->message);
+    $role = $lettermint->team->createRole(['name' => 'Support', 'description' => null, 'permissions' => ['messages:read']]);
+    assertType(TeamRoleData::class, $role);
+    assertType('string|null', $role->description);
+    assertType(TeamRoleData::class, $lettermint->team->duplicateRole('r', ['name' => 'Copy']));
+    assertType('string', $lettermint->team->deleteRole('r', ['replacement_role_id' => 'r2'])->message);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }

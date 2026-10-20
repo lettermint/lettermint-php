@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Lettermint\Resources;
 
 use Lettermint\Internal\Transport;
+use Lettermint\Types\MessageResponse;
 use Lettermint\Types\TeamData;
 use Lettermint\Types\TeamMutationResponse;
+use Lettermint\Types\TeamRoleData;
 use Lettermint\Types\TeamRoleListResponse;
 use Lettermint\Types\TeamUsageDetailData;
 
@@ -15,6 +17,10 @@ use Lettermint\Types\TeamUsageDetailData;
  *
  * @phpstan-import-type GetTeamQuery from \Lettermint\Types\ApiTypes
  * @phpstan-import-type UpdateTeamData from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type CreateTeamRoleData from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type UpdateTeamRoleData from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type DeleteTeamRoleQuery from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type DuplicateTeamRoleData from \Lettermint\Types\ApiTypes
  */
 final class Team extends Resource
 {
@@ -64,5 +70,57 @@ final class Team extends Resource
     public function roles(): TeamRoleListResponse
     {
         return $this->transport->object(TeamRoleListResponse::class, 'GET /team/roles', 'team.roles');
+    }
+
+    public function retrieveRole(string $roleId): TeamRoleData
+    {
+        return $this->transport->object(TeamRoleData::class, 'GET /team/roles/{roleId}', 'team.retrieveRole', ['roleId' => $roleId]);
+    }
+
+    /**
+     * Creates a custom role. Custom roles need a plan that includes them; the
+     * permissions must include everything they depend on, and role names are
+     * unique within the team.
+     *
+     * @param  CreateTeamRoleData  $body
+     */
+    public function createRole(array $body): TeamRoleData
+    {
+        return $this->transport->object(TeamRoleData::class, 'POST /team/roles', 'team.createRole', json: $body);
+    }
+
+    /**
+     * Replaces the name, description and permissions of a custom role. Built-in
+     * roles cannot be changed.
+     *
+     * @param  UpdateTeamRoleData  $body
+     */
+    public function updateRole(string $roleId, array $body): TeamRoleData
+    {
+        return $this->transport->object(TeamRoleData::class, 'PUT /team/roles/{roleId}', 'team.updateRole', ['roleId' => $roleId], json: $body);
+    }
+
+    /**
+     * Deletes a custom role. While the role is still assigned to members,
+     * invites or SCIM groups, pass the role that receives those assignments.
+     * Built-in roles cannot be deleted.
+     *
+     * @param  DeleteTeamRoleQuery  $query  For example `['replacement_role_id' => 'role-id']`.
+     */
+    public function deleteRole(string $roleId, array $query = []): MessageResponse
+    {
+        return $this->transport->object(MessageResponse::class, 'DELETE /team/roles/{roleId}', 'team.deleteRole', ['roleId' => $roleId], query: $query);
+    }
+
+    /**
+     * Copies a role's permissions to a new custom role. Without a description,
+     * the copy keeps the source role's description. The Owner role cannot be
+     * duplicated.
+     *
+     * @param  DuplicateTeamRoleData  $body
+     */
+    public function duplicateRole(string $roleId, array $body): TeamRoleData
+    {
+        return $this->transport->object(TeamRoleData::class, 'POST /team/roles/{roleId}/duplicate', 'team.duplicateRole', ['roleId' => $roleId], json: $body);
     }
 }

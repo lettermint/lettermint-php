@@ -276,7 +276,7 @@ $html = $lettermint->messages->html('message-id');
 | `routes` | `list($projectId)`, `iterate($projectId)`, `create($projectId, …)`, `retrieve`, `update`, `delete`, `verifyInboundDomain` |
 | `stats` | `retrieve` |
 | `suppressions` | `list`, `iterate`, `create`, `delete` |
-| `team` | `retrieve`, `update`, `usage`, `roles` |
+| `team` | `retrieve`, `update`, `usage`, `roles`, `retrieveRole`, `createRole`, `updateRole`, `deleteRole`, `duplicateRole` |
 | `team->members` | `list`, `iterate`, `retrieve`, `updateAssignment` |
 | `team->invites` | `list`, `iterate`, `retrieve`, `create`, `update`, `revoke` |
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
@@ -292,6 +292,19 @@ $invite = $lettermint->team->invites->create([
     'project_access' => ['scope' => 'selected', 'project_ids' => ['project-id']],
 ]);
 $lettermint->team->invites->revoke($invite->id);
+```
+
+`team->createRole()` creates a custom role, on plans that include custom roles; the permissions must include everything they depend on. `team->updateRole()` replaces a custom role's name, description and permissions, and `team->duplicateRole()` copies a role under a new name. Built-in roles cannot be changed or deleted. A role that is still assigned to members, invites or SCIM groups needs a replacement role when you delete it:
+
+```php
+use Lettermint\Types\RbacPermission;
+
+$role = $lettermint->team->createRole([
+    'name' => 'Support',
+    'description' => 'Reads messages.',
+    'permissions' => [RbacPermission::MESSAGES_READ],
+]);
+$lettermint->team->deleteRole($role->id, ['replacement_role_id' => 'other-role-id']);
 ```
 
 `webhooks->deliveries->retry()` sends a delivery's original payload to the webhook again now; when the delivery cannot be retried, it throws a `ConflictException` whose `errorCode` says why.
