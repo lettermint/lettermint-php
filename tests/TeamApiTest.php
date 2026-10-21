@@ -20,6 +20,7 @@ use Lettermint\Types\Operations;
 use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\ProjectListData;
 use Lettermint\Types\RbacConflictCode;
+use Lettermint\Types\RbacPermission;
 use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\RouteData;
 use Lettermint\Types\RouteListData;
@@ -29,6 +30,7 @@ use Lettermint\Types\TeamInviteData;
 use Lettermint\Types\TeamInviteDataRole;
 use Lettermint\Types\TeamMemberData;
 use Lettermint\Types\TeamMemberProjectAccessData;
+use Lettermint\Types\TeamRoleData;
 use Lettermint\Types\WebhookDeliveryData;
 use Lettermint\Types\WebhookDeliveryListData;
 use Lettermint\Types\WebhookListData;
@@ -42,6 +44,7 @@ const IDS = [
     'suppressionId' => 'suppression_1',
     'userId' => 'user/id',
     'inviteId' => 'invite/1',
+    'roleId' => 'role/1',
     'webhookId' => 'webhook_1',
     'deliveryId' => 'delivery_1',
 ];
@@ -62,6 +65,7 @@ function operationCalls(): array
         'DELETE /routes/{routeId}' => fn (Lettermint $l) => $l->routes->delete($ids['routeId']),
         'DELETE /suppressions/{suppressionId}' => fn (Lettermint $l) => $l->suppressions->delete($ids['suppressionId']),
         'DELETE /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->revoke($ids['inviteId']),
+        'DELETE /team/roles/{roleId}' => fn (Lettermint $l) => $l->team->deleteRole($ids['roleId']),
         'DELETE /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->delete($ids['webhookId']),
         'GET /blocked-file-types' => fn (Lettermint $l) => $l->blockedFileTypes(),
         'GET /domains' => fn (Lettermint $l) => $l->domains->list(),
@@ -86,6 +90,7 @@ function operationCalls(): array
         'GET /team/members' => fn (Lettermint $l) => $l->team->members->list(),
         'GET /team/members/{userId}' => fn (Lettermint $l) => $l->team->members->retrieve($ids['userId']),
         'GET /team/roles' => fn (Lettermint $l) => $l->team->roles(),
+        'GET /team/roles/{roleId}' => fn (Lettermint $l) => $l->team->retrieveRole($ids['roleId']),
         'GET /team/usage' => fn (Lettermint $l) => $l->team->usage(),
         'GET /webhooks' => fn (Lettermint $l) => $l->webhooks->list(),
         'GET /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->retrieve($ids['webhookId']),
@@ -109,6 +114,8 @@ function operationCalls(): array
         'POST /send/batch' => fn (Lettermint $l) => $l->emails->sendBatch([['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x']]),
         'POST /suppressions' => fn (Lettermint $l) => $l->suppressions->create(['reason' => 'manual', 'scope' => 'team', 'emails' => ['blocked@example.test']]),
         'POST /team/invites' => fn (Lettermint $l) => $l->team->invites->create(['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
+        'POST /team/roles' => fn (Lettermint $l) => $l->team->createRole(['name' => 'Support', 'permissions' => ['messages:read']]),
+        'POST /team/roles/{roleId}/duplicate' => fn (Lettermint $l) => $l->team->duplicateRole($ids['roleId'], ['name' => 'Support copy']),
         'POST /webhooks' => fn (Lettermint $l) => $l->webhooks->create(['name' => 'Hook', 'url' => 'https://example.test/hook', 'events' => ['message.sent']]),
         'POST /webhooks/{webhookId}/deliveries/{deliveryId}/retry' => fn (Lettermint $l) => $l->webhooks->deliveries->retry($ids['webhookId'], $ids['deliveryId']),
         'POST /webhooks/{webhookId}/regenerate-secret' => fn (Lettermint $l) => $l->webhooks->regenerateSecret($ids['webhookId']),
@@ -120,22 +127,17 @@ function operationCalls(): array
         'PUT /team' => fn (Lettermint $l) => $l->team->update(['name' => 'Acme']),
         'PUT /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->update($ids['inviteId'], ['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
         'PUT /team/members/{userId}/assignment' => fn (Lettermint $l) => $l->team->members->updateAssignment($ids['userId'], ['role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
+        'PUT /team/roles/{roleId}' => fn (Lettermint $l) => $l->team->updateRole($ids['roleId'], ['name' => 'Support', 'permissions' => ['messages:read']]),
         'PUT /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->update($ids['webhookId'], ['basic_auth' => null]),
     ];
 }
 
 /**
  * Operations in the generated table whose SDK methods are added by the next
- * PRs in this stack (team role management, then member removal). Each of
- * those PRs removes its operations; the last one removes this list.
+ * PR in this stack (member removal), which removes this list.
  */
 const PENDING_OPERATIONS = [
     'DELETE /team/members/{userId}',
-    'DELETE /team/roles/{roleId}',
-    'GET /team/roles/{roleId}',
-    'POST /team/roles',
-    'POST /team/roles/{roleId}/duplicate',
-    'PUT /team/roles/{roleId}',
 ];
 
 /**
@@ -440,6 +442,126 @@ describe('team invites', function () {
             ->toThrow(LettermintConfigException::class, 'team.invites.update: inviteId')
             ->and(fn () => $lettermint->team->invites->revoke($id))
             ->toThrow(LettermintConfigException::class, 'team.invites.revoke: inviteId')
+            ->and($api->requests)->toBeEmpty();
+    })->with(['', '.', '..']);
+});
+
+const ROLE = [
+    'id' => 'role_1',
+    'name' => 'Support',
+    'description' => 'Reads messages and adds suppressions.',
+    'system_key' => null,
+    'permissions' => ['messages:read', 'suppressions:add'],
+    'assignable' => true,
+];
+
+describe('team roles', function () {
+    it('creates a custom role', function () {
+        [$lettermint, $api] = client(fn () => json(201, ROLE));
+        $body = ['name' => 'Support', 'description' => 'Reads messages and adds suppressions.', 'permissions' => [RbacPermission::MESSAGES_READ, 'suppressions:add']];
+        $role = $lettermint->team->createRole($body);
+        expect($role)->toBeInstanceOf(TeamRoleData::class)
+            ->and($role->id)->toBe('role_1')
+            ->and($role->name)->toBe('Support')
+            ->and($role->description)->toBe('Reads messages and adds suppressions.')
+            ->and($role->system_key)->toBeNull()
+            ->and($role->permissions)->toBe(['messages:read', 'suppressions:add'])
+            ->and($role->assignable)->toBeTrue()
+            ->and($api->last()->method)->toBe('POST')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/roles')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key')
+            ->and($api->last()->json())->toBe($body);
+        $lettermint->team->createRole(['name' => 'Viewer', 'permissions' => []]);
+        expect($api->last()->rawBody)->toBe('{"name":"Viewer","permissions":[]}');
+    });
+
+    it('reads a role description that is set, null or absent', function (?string $description, bool $present) {
+        $role = ['id' => 'role_1', 'name' => 'Support', 'permissions' => [], 'assignable' => true];
+        if ($present) {
+            $role['description'] = $description;
+        }
+        [$lettermint, $api] = client(fn () => json(200, $role));
+        $result = $lettermint->team->retrieveRole('role/1');
+        expect($result)->toBeInstanceOf(TeamRoleData::class)
+            ->and($result->description)->toBe($description)
+            ->and($result->has('description'))->toBe($present)
+            ->and($api->last()->method)->toBe('GET')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/roles/role%2F1')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN);
+    })->with([
+        'set' => ['Reads messages.', true],
+        'null' => [null, true],
+        'absent' => [null, false],
+    ]);
+
+    it('replaces and duplicates a role', function () {
+        [$lettermint, $api] = client(fn (RecordedRequest $request) => json($request->method === 'POST' ? 201 : 200, ROLE));
+        $body = ['name' => 'Support', 'description' => null, 'permissions' => ['messages:read']];
+        expect($lettermint->team->updateRole('role/1', $body))->toBeInstanceOf(TeamRoleData::class)
+            ->and($api->last()->method)->toBe('PUT')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/roles/role%2F1')
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->rawBody)->toBe('{"name":"Support","description":null,"permissions":["messages:read"]}');
+
+        expect($lettermint->team->duplicateRole('role/1', ['name' => 'Support copy'])->name)->toBe('Support')
+            ->and($api->last()->method)->toBe('POST')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/roles/role%2F1/duplicate')
+            ->and($api->last()->rawBody)->toBe('{"name":"Support copy"}');
+        $lettermint->team->duplicateRole('role/1', ['name' => 'Support copy', 'description' => 'A copy.']);
+        expect($api->last()->json())->toBe(['name' => 'Support copy', 'description' => 'A copy.']);
+
+        foreach ($api->requests as $request) {
+            expect($request->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN);
+        }
+    });
+
+    it('deletes a role with or without a replacement role', function () {
+        [$lettermint, $api] = client(fn () => json(200, ['message' => 'The role was deleted.']));
+        $result = $lettermint->team->deleteRole('role/1');
+        expect($result)->toBeInstanceOf(MessageResponse::class)
+            ->and($result->message)->toBe('The role was deleted.')
+            ->and($api->last()->method)->toBe('DELETE')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/roles/role%2F1')
+            ->and($api->last()->query)->toBe([])
+            ->and($api->last()->rawBody)->toBe('')
+            ->and($api->last()->headers)->not->toHaveKey('content-type')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN);
+        $lettermint->team->deleteRole('role/1', ['replacement_role_id' => 'role/2']);
+        expect($api->last()->url)->toBe(BASE_URL.'/team/roles/role%2F1?replacement_role_id=role%2F2')
+            ->and($api->last()->query)->toBe(['replacement_role_id' => 'role/2']);
+        $lettermint->team->deleteRole('role/1', ['replacement_role_id' => null]);
+        expect($api->last()->url)->toBe(BASE_URL.'/team/roles/role%2F1');
+    });
+
+    it('throws a ConflictException for a built-in role', function () {
+        [$lettermint] = client(fn () => json(409, ['error' => ['code' => 'built_in_role_immutable', 'message' => 'Built-in roles cannot be changed.']]));
+        $error = thrown(fn () => $lettermint->team->updateRole('role_owner', ['name' => 'Boss', 'permissions' => []]));
+        expect($error::class)->toBe(ConflictException::class)
+            ->and($error->status)->toBe(409)
+            ->and($error->errorCode)->toBe(RbacConflictCode::BUILT_IN_ROLE_IMMUTABLE)
+            ->and($error->getMessage())->toBe('Built-in roles cannot be changed.');
+    });
+
+    it('throws a ValidationException when a replacement role is needed', function () {
+        [$lettermint] = client(fn () => json(422, ['message' => 'The replacement role id field is required.', 'errors' => ['replacement_role_id' => ['The replacement role id field is required.']]]));
+        $error = thrown(fn () => $lettermint->team->deleteRole('role_1'));
+        expect($error::class)->toBe(ValidationException::class)
+            ->and($error->errors)->toBe(['replacement_role_id' => ['The replacement role id field is required.']]);
+    });
+
+    it('rejects an empty role ID before any request', function (string $id) {
+        [$lettermint, $api] = client();
+        expect(fn () => $lettermint->team->retrieveRole($id))
+            ->toThrow(LettermintConfigException::class, 'team.retrieveRole: roleId must be a non-empty string other than "." and "..".')
+            ->and(fn () => $lettermint->team->updateRole($id, ['name' => 'x', 'permissions' => []]))
+            ->toThrow(LettermintConfigException::class, 'team.updateRole: roleId')
+            ->and(fn () => $lettermint->team->deleteRole($id))
+            ->toThrow(LettermintConfigException::class, 'team.deleteRole: roleId')
+            ->and(fn () => $lettermint->team->duplicateRole($id, ['name' => 'x']))
+            ->toThrow(LettermintConfigException::class, 'team.duplicateRole: roleId')
             ->and($api->requests)->toBeEmpty();
     })->with(['', '.', '..']);
 });
