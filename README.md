@@ -278,9 +278,21 @@ $html = $lettermint->messages->html('message-id');
 | `suppressions` | `list`, `iterate`, `create`, `delete` |
 | `team` | `retrieve`, `update`, `usage`, `roles` |
 | `team->members` | `list`, `iterate`, `retrieve`, `updateAssignment` |
+| `team->invites` | `list`, `iterate`, `retrieve`, `create`, `update`, `revoke` |
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
 | `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)`, `retry($webhookId, $deliveryId)` |
 | (root) | `ping`, `analytics`, `analyticsPages`, `blockedFileTypes` |
+
+`team->invites->create()` sends the invitation email; the team needs a free seat, and the Owner role cannot be assigned. `team->invites->update()` replaces the email, role and project access of a pending invite and sends a new email only when the address changes:
+
+```php
+$invite = $lettermint->team->invites->create([
+    'email' => 'jane@acme.com',
+    'role_id' => 'role-id',
+    'project_access' => ['scope' => 'selected', 'project_ids' => ['project-id']],
+]);
+$lettermint->team->invites->revoke($invite->id);
+```
 
 `webhooks->deliveries->retry()` sends a delivery's original payload to the webhook again now; when the delivery cannot be retried, it throws a `ConflictException` whose `errorCode` says why.
 

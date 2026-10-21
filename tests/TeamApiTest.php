@@ -8,20 +8,27 @@ use Lettermint\Exceptions\ApiException;
 use Lettermint\Exceptions\ConflictException;
 use Lettermint\Exceptions\LettermintConfigException;
 use Lettermint\Exceptions\UnexpectedResponseException;
+use Lettermint\Exceptions\ValidationException;
 use Lettermint\Lettermint;
 use Lettermint\Tests\Support\RecordedRequest;
 use Lettermint\Types\DomainListData;
+use Lettermint\Types\ListTeamInvitesResponse;
 use Lettermint\Types\MessageEventData;
 use Lettermint\Types\MessageListData;
+use Lettermint\Types\MessageResponse;
 use Lettermint\Types\Operations;
 use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\ProjectListData;
+use Lettermint\Types\RbacConflictCode;
 use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\RouteData;
 use Lettermint\Types\RouteListData;
 use Lettermint\Types\SendMailResponse;
 use Lettermint\Types\SuppressedRecipientData;
+use Lettermint\Types\TeamInviteData;
+use Lettermint\Types\TeamInviteDataRole;
 use Lettermint\Types\TeamMemberData;
+use Lettermint\Types\TeamMemberProjectAccessData;
 use Lettermint\Types\WebhookDeliveryData;
 use Lettermint\Types\WebhookDeliveryListData;
 use Lettermint\Types\WebhookListData;
@@ -34,6 +41,7 @@ const IDS = [
     'routeId' => 'route_1',
     'suppressionId' => 'suppression_1',
     'userId' => 'user/id',
+    'inviteId' => 'invite/1',
     'webhookId' => 'webhook_1',
     'deliveryId' => 'delivery_1',
 ];
@@ -53,6 +61,7 @@ function operationCalls(): array
         'DELETE /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->delete($ids['projectId']),
         'DELETE /routes/{routeId}' => fn (Lettermint $l) => $l->routes->delete($ids['routeId']),
         'DELETE /suppressions/{suppressionId}' => fn (Lettermint $l) => $l->suppressions->delete($ids['suppressionId']),
+        'DELETE /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->revoke($ids['inviteId']),
         'DELETE /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->delete($ids['webhookId']),
         'GET /blocked-file-types' => fn (Lettermint $l) => $l->blockedFileTypes(),
         'GET /domains' => fn (Lettermint $l) => $l->domains->list(),
@@ -72,6 +81,8 @@ function operationCalls(): array
         'GET /stats' => fn (Lettermint $l) => $l->stats->retrieve(['from' => '2026-01-01', 'to' => '2026-01-31']),
         'GET /suppressions' => fn (Lettermint $l) => $l->suppressions->list(),
         'GET /team' => fn (Lettermint $l) => $l->team->retrieve(),
+        'GET /team/invites' => fn (Lettermint $l) => $l->team->invites->list(),
+        'GET /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->retrieve($ids['inviteId']),
         'GET /team/members' => fn (Lettermint $l) => $l->team->members->list(),
         'GET /team/members/{userId}' => fn (Lettermint $l) => $l->team->members->retrieve($ids['userId']),
         'GET /team/roles' => fn (Lettermint $l) => $l->team->roles(),
@@ -97,6 +108,7 @@ function operationCalls(): array
         'POST /send' => fn (Lettermint $l) => $l->emails->send(['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x']),
         'POST /send/batch' => fn (Lettermint $l) => $l->emails->sendBatch([['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x']]),
         'POST /suppressions' => fn (Lettermint $l) => $l->suppressions->create(['reason' => 'manual', 'scope' => 'team', 'emails' => ['blocked@example.test']]),
+        'POST /team/invites' => fn (Lettermint $l) => $l->team->invites->create(['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
         'POST /webhooks' => fn (Lettermint $l) => $l->webhooks->create(['name' => 'Hook', 'url' => 'https://example.test/hook', 'events' => ['message.sent']]),
         'POST /webhooks/{webhookId}/deliveries/{deliveryId}/retry' => fn (Lettermint $l) => $l->webhooks->deliveries->retry($ids['webhookId'], $ids['deliveryId']),
         'POST /webhooks/{webhookId}/regenerate-secret' => fn (Lettermint $l) => $l->webhooks->regenerateSecret($ids['webhookId']),
@@ -106,9 +118,32 @@ function operationCalls(): array
         'PUT /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->update($ids['projectId'], ['destination' => 'reports@example.test']),
         'PUT /routes/{routeId}' => fn (Lettermint $l) => $l->routes->update($ids['routeId'], ['name' => 'Renamed']),
         'PUT /team' => fn (Lettermint $l) => $l->team->update(['name' => 'Acme']),
+        'PUT /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->update($ids['inviteId'], ['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
         'PUT /team/members/{userId}/assignment' => fn (Lettermint $l) => $l->team->members->updateAssignment($ids['userId'], ['role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
         'PUT /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->update($ids['webhookId'], ['basic_auth' => null]),
     ];
+}
+
+/**
+ * Operations in the generated table whose SDK methods are added by the next
+ * PRs in this stack (team role management, then member removal). Each of
+ * those PRs removes its operations; the last one removes this list.
+ */
+const PENDING_OPERATIONS = [
+    'DELETE /team/members/{userId}',
+    'DELETE /team/roles/{roleId}',
+    'GET /team/roles/{roleId}',
+    'POST /team/roles',
+    'POST /team/roles/{roleId}/duplicate',
+    'PUT /team/roles/{roleId}',
+];
+
+/**
+ * @return list<string>
+ */
+function coveredOperations(): array
+{
+    return array_values(array_diff(array_keys(Operations::ALL), PENDING_OPERATIONS));
 }
 
 function responseFor(string $key): Response
@@ -130,11 +165,12 @@ function responseFor(string $key): Response
 describe('operation coverage', function () {
     it('has an SDK method for every operation in the generated table', function () {
         $calls = array_keys(operationCalls());
-        $operations = array_keys(Operations::ALL);
+        $operations = coveredOperations();
         sort($calls);
         sort($operations);
         expect($calls)->toBe($operations)
-            ->and($operations)->toHaveCount(60);
+            ->and(Operations::ALL)->toHaveCount(71)
+            ->and(array_diff(PENDING_OPERATIONS, array_keys(Operations::ALL)))->toBe([]);
     });
 
     it('calls the operation with the right method, path, token and result type', function (string $key) {
@@ -168,7 +204,7 @@ describe('operation coverage', function () {
             default => expect($result)->toBeInstanceOf(ApiObject::class)
                 ->and(get_class($result))->toBe('Lettermint\\Types\\'.$type),
         };
-    })->with(array_keys(Operations::ALL));
+    })->with(coveredOperations());
 });
 
 describe('request bodies and options', function () {
@@ -310,6 +346,104 @@ describe('request bodies and options', function () {
     ]);
 });
 
+const INVITE = [
+    'id' => 'invite_1',
+    'email' => 'jane@example.test',
+    'role' => ['id' => 'role_1', 'name' => 'Developer'],
+    'project_access' => ['scope' => 'selected', 'projects' => [['id' => 'project_1', 'name' => 'Production']]],
+    'created_at' => '2026-10-20T09:00:00Z',
+];
+
+describe('team invites', function () {
+    it('invites a person with a role and project access', function () {
+        [$lettermint, $api] = client(fn () => json(201, INVITE));
+        $body = ['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'selected', 'project_ids' => ['project_1']]];
+        $invite = $lettermint->team->invites->create($body);
+        expect($invite)->toBeInstanceOf(TeamInviteData::class)
+            ->and($invite->id)->toBe('invite_1')
+            ->and($invite->email)->toBe('jane@example.test')
+            ->and($invite->role)->toBeInstanceOf(TeamInviteDataRole::class)
+            ->and($invite->role->name)->toBe('Developer')
+            ->and($invite->project_access)->toBeInstanceOf(TeamMemberProjectAccessData::class)
+            ->and($invite->project_access->scope)->toBe('selected')
+            ->and($invite->project_access->projects[0]->id)->toBe('project_1')
+            ->and($invite->created_at)->toBe('2026-10-20T09:00:00Z')
+            ->and($api->last()->method)->toBe('POST')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/invites')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key')
+            ->and($api->last()->json())->toBe($body);
+    });
+
+    it('lists, retrieves, replaces and revokes invites', function () {
+        [$lettermint, $api] = client(fn (RecordedRequest $request) => match ($request->method) {
+            'GET' => json(200, str_ends_with(explode('?', $request->url)[0], '/team/invites') ? ['data' => [INVITE], 'next_cursor' => 'c2'] : INVITE),
+            'PUT' => json(200, ['email' => 'john@example.test'] + INVITE),
+            default => json(200, ['message' => 'The invite was revoked.']),
+        });
+
+        $page = $lettermint->team->invites->list(['page' => ['size' => 10, 'cursor' => 'c1']]);
+        expect($page)->toBeInstanceOf(ListTeamInvitesResponse::class)
+            ->and($page->data[0])->toBeInstanceOf(TeamInviteData::class)
+            ->and($page->next_cursor)->toBe('c2')
+            ->and($api->last()->query)->toBe(['page[size]' => '10', 'page[cursor]' => 'c1']);
+
+        expect($lettermint->team->invites->retrieve('invite/1')->role->id)->toBe('role_1')
+            ->and($api->last()->method)->toBe('GET')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/invites/invite%2F1');
+
+        $body = ['email' => 'john@example.test', 'role_id' => 'role_2', 'project_access' => ['scope' => 'all']];
+        expect($lettermint->team->invites->update('invite/1', $body)->email)->toBe('john@example.test')
+            ->and($api->last()->method)->toBe('PUT')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/invites/invite%2F1')
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->json())->toBe($body);
+
+        $revoked = $lettermint->team->invites->revoke('invite/1');
+        expect($revoked)->toBeInstanceOf(MessageResponse::class)
+            ->and($revoked->message)->toBe('The invite was revoked.')
+            ->and($api->last()->method)->toBe('DELETE')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/invites/invite%2F1')
+            ->and($api->last()->rawBody)->toBe('')
+            ->and($api->last()->headers)->not->toHaveKey('content-type');
+
+        foreach ($api->requests as $request) {
+            expect($request->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN);
+        }
+    });
+
+    it('throws a ConflictException when the team has no free seat', function () {
+        [$lettermint] = client(fn () => json(409, ['error' => ['code' => 'stale_resource', 'message' => 'The team has no free seat.']]));
+        $error = thrown(fn () => $lettermint->team->invites->create(['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']]));
+        expect($error::class)->toBe(ConflictException::class)
+            ->and($error->status)->toBe(409)
+            ->and($error->errorCode)->toBe(RbacConflictCode::STALE_RESOURCE)
+            ->and($error->getMessage())->toBe('The team has no free seat.');
+    });
+
+    it('throws a ValidationException for an invalid invite', function () {
+        [$lettermint] = client(fn () => json(422, ['message' => 'The email field must be a valid email address.', 'errors' => ['email' => ['The email field must be a valid email address.']]]));
+        $error = thrown(fn () => $lettermint->team->invites->update('invite_1', ['email' => 'nope', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']]));
+        expect($error::class)->toBe(ValidationException::class)
+            ->and($error->status)->toBe(422)
+            ->and($error->errors)->toBe(['email' => ['The email field must be a valid email address.']]);
+    });
+
+    it('rejects an empty invite ID before any request', function (string $id) {
+        [$lettermint, $api] = client();
+        $body = ['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']];
+        expect(fn () => $lettermint->team->invites->retrieve($id))
+            ->toThrow(LettermintConfigException::class, 'team.invites.retrieve: inviteId must be a non-empty string other than "." and "..".')
+            ->and(fn () => $lettermint->team->invites->update($id, $body))
+            ->toThrow(LettermintConfigException::class, 'team.invites.update: inviteId')
+            ->and(fn () => $lettermint->team->invites->revoke($id))
+            ->toThrow(LettermintConfigException::class, 'team.invites.revoke: inviteId')
+            ->and($api->requests)->toBeEmpty();
+    })->with(['', '.', '..']);
+});
+
 describe('query parameters', function () {
     it('serializes nested arrays to the bracket syntax', function () {
         [$lettermint, $api] = client(fn () => json(200, ['data' => [], 'next_cursor' => null]));
@@ -402,6 +536,7 @@ describe('pagination', function () {
         'routes' => [fn (Lettermint $l) => $l->routes->iterate('p'), RouteListData::class],
         'suppressions' => [fn (Lettermint $l) => $l->suppressions->iterate(), SuppressedRecipientData::class],
         'team members' => [fn (Lettermint $l) => $l->team->members->iterate(), TeamMemberData::class],
+        'team invites' => [fn (Lettermint $l) => $l->team->invites->iterate(), TeamInviteData::class],
         'webhooks' => [fn (Lettermint $l) => $l->webhooks->iterate(), WebhookListData::class],
         'webhook deliveries' => [fn (Lettermint $l) => $l->webhooks->deliveries->iterate('w'), WebhookDeliveryListData::class],
     ]);
