@@ -7,6 +7,7 @@ use Lettermint\ApiObject;
 use Lettermint\Exceptions\ApiException;
 use Lettermint\Exceptions\ConflictException;
 use Lettermint\Exceptions\LettermintConfigException;
+use Lettermint\Exceptions\NotFoundException;
 use Lettermint\Exceptions\UnexpectedResponseException;
 use Lettermint\Exceptions\ValidationException;
 use Lettermint\Lettermint;
@@ -65,6 +66,7 @@ function operationCalls(): array
         'DELETE /routes/{routeId}' => fn (Lettermint $l) => $l->routes->delete($ids['routeId']),
         'DELETE /suppressions/{suppressionId}' => fn (Lettermint $l) => $l->suppressions->delete($ids['suppressionId']),
         'DELETE /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->revoke($ids['inviteId']),
+        'DELETE /team/members/{userId}' => fn (Lettermint $l) => $l->team->members->remove($ids['userId']),
         'DELETE /team/roles/{roleId}' => fn (Lettermint $l) => $l->team->deleteRole($ids['roleId']),
         'DELETE /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->delete($ids['webhookId']),
         'GET /blocked-file-types' => fn (Lettermint $l) => $l->blockedFileTypes(),
@@ -132,22 +134,6 @@ function operationCalls(): array
     ];
 }
 
-/**
- * Operations in the generated table whose SDK methods are added by the next
- * PR in this stack (member removal), which removes this list.
- */
-const PENDING_OPERATIONS = [
-    'DELETE /team/members/{userId}',
-];
-
-/**
- * @return list<string>
- */
-function coveredOperations(): array
-{
-    return array_values(array_diff(array_keys(Operations::ALL), PENDING_OPERATIONS));
-}
-
 function responseFor(string $key): Response
 {
     $response = Operations::ALL[$key]['response'];
@@ -167,12 +153,11 @@ function responseFor(string $key): Response
 describe('operation coverage', function () {
     it('has an SDK method for every operation in the generated table', function () {
         $calls = array_keys(operationCalls());
-        $operations = coveredOperations();
+        $operations = array_keys(Operations::ALL);
         sort($calls);
         sort($operations);
         expect($calls)->toBe($operations)
-            ->and(Operations::ALL)->toHaveCount(71)
-            ->and(array_diff(PENDING_OPERATIONS, array_keys(Operations::ALL)))->toBe([]);
+            ->and($operations)->toHaveCount(71);
     });
 
     it('calls the operation with the right method, path, token and result type', function (string $key) {
@@ -206,7 +191,7 @@ describe('operation coverage', function () {
             default => expect($result)->toBeInstanceOf(ApiObject::class)
                 ->and(get_class($result))->toBe('Lettermint\\Types\\'.$type),
         };
-    })->with(coveredOperations());
+    })->with(array_keys(Operations::ALL));
 });
 
 describe('request bodies and options', function () {
@@ -564,6 +549,61 @@ describe('team roles', function () {
             ->toThrow(LettermintConfigException::class, 'team.duplicateRole: roleId')
             ->and($api->requests)->toBeEmpty();
     })->with(['', '.', '..']);
+});
+
+describe('team members', function () {
+    it('removes a member', function () {
+        [$lettermint, $api] = client(fn () => json(200, ['message' => 'The member was removed.']));
+        $result = $lettermint->team->members->remove('user/id');
+        expect($result)->toBeInstanceOf(MessageResponse::class)
+            ->and($result->message)->toBe('The member was removed.')
+            ->and($api->last()->method)->toBe('DELETE')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/members/user%2Fid')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->headers)->not->toHaveKey('content-type')
+            ->and($api->last()->rawBody)->toBe('');
+    });
+
+    it('throws a ConflictException when the Owner is removed', function () {
+        [$lettermint] = client(fn () => json(409, ['error' => ['code' => 'owner_protected', 'message' => 'The Owner cannot be removed.']]));
+        $error = thrown(fn () => $lettermint->team->members->remove('owner'));
+        expect($error::class)->toBe(ConflictException::class)
+            ->and($error->status)->toBe(409)
+            ->and($error->errorCode)->toBe(RbacConflictCode::OWNER_PROTECTED)
+            ->and($error->getMessage())->toBe('The Owner cannot be removed.');
+    });
+
+    it('throws a NotFoundException for an unknown member', function () {
+        [$lettermint] = client(fn () => json(404, ['message' => 'Not found.']));
+        expect(thrown(fn () => $lettermint->team->members->remove('nobody')))->toBeInstanceOf(NotFoundException::class);
+    });
+
+    it('rejects an empty user ID before any request', function (string $id) {
+        [$lettermint, $api] = client();
+        expect(fn () => $lettermint->team->members->remove($id))
+            ->toThrow(LettermintConfigException::class, 'team.members.remove: userId must be a non-empty string other than "." and "..".')
+            ->and($api->requests)->toBeEmpty();
+    })->with(['', '.', '..']);
+
+    it('lists only the members who can access a project', function () {
+        $pages = [
+            'first' => ['data' => [['id' => 'u1']], 'next_cursor' => 'c2'],
+            'c2' => ['data' => [['id' => 'u2']], 'next_cursor' => null],
+        ];
+        [$lettermint, $api] = client(fn (RecordedRequest $request) => json(200, $pages[$request->query['page[cursor]'] ?? 'first']));
+        $page = $lettermint->team->members->list(['filter' => ['project_id' => 'project/1'], 'page' => ['size' => 1]]);
+        expect($page->data[0])->toBeInstanceOf(TeamMemberData::class)
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/members?filter%5Bproject_id%5D=project%2F1&page%5Bsize%5D=1')
+            ->and($api->last()->query)->toBe(['filter[project_id]' => 'project/1', 'page[size]' => '1']);
+
+        $members = iterator_to_array($lettermint->team->members->iterate(['filter' => ['project_id' => 'project/1']]), false);
+        expect(array_map(fn (TeamMemberData $member): string => $member->id, $members))->toBe(['u1', 'u2'])
+            ->and(array_map(fn (RecordedRequest $r): array => $r->query, array_slice($api->requests, 1)))->toBe([
+                ['filter[project_id]' => 'project/1'],
+                ['filter[project_id]' => 'project/1', 'page[cursor]' => 'c2'],
+            ]);
+    });
 });
 
 describe('query parameters', function () {

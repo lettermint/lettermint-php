@@ -6,6 +6,7 @@ namespace Lettermint\Resources;
 
 use Generator;
 use Lettermint\Types\ListTeamMembersResponse;
+use Lettermint\Types\MessageResponse;
 use Lettermint\Types\TeamMemberData;
 
 /**
@@ -17,9 +18,10 @@ use Lettermint\Types\TeamMemberData;
 final class TeamMembers extends Resource
 {
     /**
-     * Lists team members, one page at a time.
+     * Lists team members, one page at a time. `filter[project_id]` returns only
+     * the members who can access that project.
      *
-     * @param  ListTeamMembersQuery  $query
+     * @param  ListTeamMembersQuery  $query  For example `['filter' => ['project_id' => 'project-id']]`.
      */
     public function list(array $query = []): ListTeamMembersResponse
     {
@@ -50,5 +52,13 @@ final class TeamMembers extends Resource
     public function updateAssignment(string $userId, array $body): TeamMemberData
     {
         return $this->transport->object(TeamMemberData::class, 'PUT /team/members/{userId}/assignment', 'team.members.updateAssignment', ['userId' => $userId], json: $body);
+    }
+
+    /**
+     * Removes a member from the team. The Owner cannot be removed.
+     */
+    public function remove(string $userId): MessageResponse
+    {
+        return $this->transport->object(MessageResponse::class, 'DELETE /team/members/{userId}', 'team.members.remove', ['userId' => $userId]);
     }
 }

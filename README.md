@@ -277,11 +277,13 @@ $html = $lettermint->messages->html('message-id');
 | `stats` | `retrieve` |
 | `suppressions` | `list`, `iterate`, `create`, `delete` |
 | `team` | `retrieve`, `update`, `usage`, `roles`, `retrieveRole`, `createRole`, `updateRole`, `deleteRole`, `duplicateRole` |
-| `team->members` | `list`, `iterate`, `retrieve`, `updateAssignment` |
+| `team->members` | `list`, `iterate`, `retrieve`, `updateAssignment`, `remove` |
 | `team->invites` | `list`, `iterate`, `retrieve`, `create`, `update`, `revoke` |
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
 | `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)`, `retry($webhookId, $deliveryId)` |
 | (root) | `ping`, `analytics`, `analyticsPages`, `blockedFileTypes` |
+
+`team->members->list()` and `iterate()` take `['filter' => ['project_id' => …]]` to return only the members who can access that project: members with access to all projects and members selected for it. `team->members->remove()` removes a member from the team; the Owner cannot be removed.
 
 `team->invites->create()` sends the invitation email; the team needs a free seat, and the Owner role cannot be assigned. `team->invites->update()` replaces the email, role and project access of a pending invite and sends a new email only when the address changes:
 
