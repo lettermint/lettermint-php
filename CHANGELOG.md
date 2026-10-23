@@ -2,6 +2,20 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 3.2.0 - 2026-10-23
+
+### What's Changed
+
+* feat: add messages resend by @bjarn in https://github.com/lettermint/lettermint-php/pull/46
+* feat: add per-email idempotency keys to batch send by @bjarn in https://github.com/lettermint/lettermint-php/pull/47
+* chore(deps): bump actions/create-github-app-token from 3.2.0 to 3.3.0 by @dependabot[bot] in https://github.com/lettermint/lettermint-php/pull/50
+* feat: add webhook delivery retry by @bjarn in https://github.com/lettermint/lettermint-php/pull/49
+* feat: add team invites by @bjarn in https://github.com/lettermint/lettermint-php/pull/51
+* feat: add team role management by @bjarn in https://github.com/lettermint/lettermint-php/pull/52
+* feat: add team member removal and a project filter for the member list by @bjarn in https://github.com/lettermint/lettermint-php/pull/53
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/3.1.0...3.2.0
+
 ## 3.1.0 - 2026-10-11
 
 ### What's Changed
