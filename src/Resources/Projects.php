@@ -27,6 +27,9 @@ final class Projects extends Resource
     /** Report forwarding of a project. */
     public readonly ReportForwarding $reportForwarding;
 
+    /** API tokens of a project. */
+    public readonly ProjectApiTokens $apiTokens;
+
     /**
      * @internal Use $lettermint->projects.
      */
@@ -34,6 +37,7 @@ final class Projects extends Resource
     {
         parent::__construct($transport);
         $this->reportForwarding = new ReportForwarding($transport);
+        $this->apiTokens = new ProjectApiTokens($transport);
     }
 
     /**
@@ -89,7 +93,8 @@ final class Projects extends Resource
     }
 
     /**
-     * Rotates the project's legacy sending token.
+     * Rotates the project's legacy sending token. To create or delete specific
+     * tokens, use apiTokens.
      *
      * @deprecated The API marks this endpoint as legacy.
      */

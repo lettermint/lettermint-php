@@ -130,6 +130,7 @@ describe('single-token clients', function () {
         $calls = [
             fn () => $lettermint->domains->list(),
             fn () => $lettermint->projects->reportForwarding->retrieve('project_1'),
+            fn () => $lettermint->projects->apiTokens->list('project_1'),
             fn () => $lettermint->team->members->list(),
             fn () => $lettermint->team->invites->list(),
             fn () => $lettermint->webhooks->deliveries->list('webhook_1'),
@@ -201,6 +202,7 @@ describe('redaction', function () {
             $lettermint->messages,
             $lettermint->projects,
             $lettermint->projects->reportForwarding,
+            $lettermint->projects->apiTokens,
             $lettermint->routes,
             $lettermint->stats,
             $lettermint->suppressions,

@@ -273,6 +273,7 @@ $html = $lettermint->messages->html('message-id');
 | `messages` | `list`, `iterate`, `retrieve`, `events`, `iterateEvents`, `source`, `html`, `text`, `reschedule`, `cancel`, `resend`, `process` |
 | `projects` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `rotateToken` |
 | `projects->reportForwarding` | `retrieve`, `update`, `delete`, `verify`, `resendCode` |
+| `projects->apiTokens` | `list($projectId)`, `iterate($projectId)`, `create($projectId, …)`, `delete($projectId, $tokenId)` |
 | `routes` | `list($projectId)`, `iterate($projectId)`, `create($projectId, …)`, `retrieve`, `update`, `delete`, `verifyInboundDomain` |
 | `stats` | `retrieve` |
 | `suppressions` | `list`, `iterate`, `create`, `delete` |
@@ -282,6 +283,14 @@ $html = $lettermint->messages->html('message-id');
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
 | `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)`, `retry($webhookId, $deliveryId)` |
 | (root) | `ping`, `analytics`, `analyticsPages`, `blockedFileTypes` |
+
+`projects->apiTokens->create()` creates a Project API token (a sending token for the project). The response holds the token's value once (`data->token`), so store it right away; `list()` and `iterate()` return the tokens without their values. Use the token to send through the API, or as the SMTP password when SMTP is enabled for the project (`smtp` then holds the host, ports and username). `delete()` makes a token stop working immediately:
+
+```php
+$created = $lettermint->projects->apiTokens->create('project-id', ['name' => 'Production']);
+$token = $created->data->token; // shown once
+$lettermint->projects->apiTokens->delete('project-id', $created->data->id);
+```
 
 `team->members->list()` and `iterate()` take `['filter' => ['project_id' => …]]` to return only the members who can access that project: members with access to all projects and members selected for it. `team->members->remove()` removes a member from the team; the Owner cannot be removed.
 
