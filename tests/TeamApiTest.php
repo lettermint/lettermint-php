@@ -8,6 +8,7 @@ use Lettermint\Exceptions\ApiException;
 use Lettermint\Exceptions\ConflictException;
 use Lettermint\Exceptions\LettermintConfigException;
 use Lettermint\Exceptions\NotFoundException;
+use Lettermint\Exceptions\PermissionException;
 use Lettermint\Exceptions\UnexpectedResponseException;
 use Lettermint\Exceptions\ValidationException;
 use Lettermint\Lettermint;
@@ -15,6 +16,7 @@ use Lettermint\Tests\Support\RecordedRequest;
 use Lettermint\Types\ApiTokenSource;
 use Lettermint\Types\DomainListData;
 use Lettermint\Types\ListProjectApiTokensResponse;
+use Lettermint\Types\ListTeamApiTokensResponse;
 use Lettermint\Types\ListTeamInvitesResponse;
 use Lettermint\Types\MessageEventData;
 use Lettermint\Types\MessageListData;
@@ -33,6 +35,9 @@ use Lettermint\Types\RouteListData;
 use Lettermint\Types\SendMailResponse;
 use Lettermint\Types\SmtpCredentials;
 use Lettermint\Types\SuppressedRecipientData;
+use Lettermint\Types\TeamApiToken;
+use Lettermint\Types\TeamApiTokenCreatedResponse;
+use Lettermint\Types\TeamApiTokenSecret;
 use Lettermint\Types\TeamInviteData;
 use Lettermint\Types\TeamInviteDataRole;
 use Lettermint\Types\TeamMemberData;
@@ -73,6 +78,7 @@ function operationCalls(): array
         'DELETE /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->delete($ids['projectId']),
         'DELETE /routes/{routeId}' => fn (Lettermint $l) => $l->routes->delete($ids['routeId']),
         'DELETE /suppressions/{suppressionId}' => fn (Lettermint $l) => $l->suppressions->delete($ids['suppressionId']),
+        'DELETE /team/api-tokens/{tokenId}' => fn (Lettermint $l) => $l->team->apiTokens->delete($ids['tokenId']),
         'DELETE /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->revoke($ids['inviteId']),
         'DELETE /team/members/{userId}' => fn (Lettermint $l) => $l->team->members->remove($ids['userId']),
         'DELETE /team/roles/{roleId}' => fn (Lettermint $l) => $l->team->deleteRole($ids['roleId']),
@@ -96,6 +102,7 @@ function operationCalls(): array
         'GET /stats' => fn (Lettermint $l) => $l->stats->retrieve(['from' => '2026-01-01', 'to' => '2026-01-31']),
         'GET /suppressions' => fn (Lettermint $l) => $l->suppressions->list(),
         'GET /team' => fn (Lettermint $l) => $l->team->retrieve(),
+        'GET /team/api-tokens' => fn (Lettermint $l) => $l->team->apiTokens->list(),
         'GET /team/invites' => fn (Lettermint $l) => $l->team->invites->list(),
         'GET /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->retrieve($ids['inviteId']),
         'GET /team/members' => fn (Lettermint $l) => $l->team->members->list(),
@@ -125,6 +132,7 @@ function operationCalls(): array
         'POST /send' => fn (Lettermint $l) => $l->emails->send(['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x']),
         'POST /send/batch' => fn (Lettermint $l) => $l->emails->sendBatch([['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x']]),
         'POST /suppressions' => fn (Lettermint $l) => $l->suppressions->create(['reason' => 'manual', 'scope' => 'team', 'emails' => ['blocked@example.test']]),
+        'POST /team/api-tokens' => fn (Lettermint $l) => $l->team->apiTokens->create(['name' => 'Terraform', 'abilities' => ['read:projects']]),
         'POST /team/invites' => fn (Lettermint $l) => $l->team->invites->create(['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
         'POST /team/roles' => fn (Lettermint $l) => $l->team->createRole(['name' => 'Support', 'permissions' => ['messages:read']]),
         'POST /team/roles/{roleId}/duplicate' => fn (Lettermint $l) => $l->team->duplicateRole($ids['roleId'], ['name' => 'Support copy']),
@@ -142,24 +150,6 @@ function operationCalls(): array
         'PUT /team/roles/{roleId}' => fn (Lettermint $l) => $l->team->updateRole($ids['roleId'], ['name' => 'Support', 'permissions' => ['messages:read']]),
         'PUT /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->update($ids['webhookId'], ['basic_auth' => null]),
     ];
-}
-
-/**
- * Operations in the generated table whose SDK methods are added by the next
- * PR in this stack (team API tokens). That PR removes this list.
- */
-const PENDING_OPERATIONS = [
-    'DELETE /team/api-tokens/{tokenId}',
-    'GET /team/api-tokens',
-    'POST /team/api-tokens',
-];
-
-/**
- * @return list<string>
- */
-function coveredOperations(): array
-{
-    return array_values(array_diff(array_keys(Operations::ALL), PENDING_OPERATIONS));
 }
 
 function responseFor(string $key): Response
@@ -181,12 +171,11 @@ function responseFor(string $key): Response
 describe('operation coverage', function () {
     it('has an SDK method for every operation in the generated table', function () {
         $calls = array_keys(operationCalls());
-        $operations = coveredOperations();
+        $operations = array_keys(Operations::ALL);
         sort($calls);
         sort($operations);
         expect($calls)->toBe($operations)
-            ->and(Operations::ALL)->toHaveCount(77)
-            ->and(array_diff(PENDING_OPERATIONS, array_keys(Operations::ALL)))->toBe([]);
+            ->and($operations)->toHaveCount(77);
     });
 
     it('calls the operation with the right method, path, token and result type', function (string $key) {
@@ -220,7 +209,7 @@ describe('operation coverage', function () {
             default => expect($result)->toBeInstanceOf(ApiObject::class)
                 ->and(get_class($result))->toBe('Lettermint\\Types\\'.$type),
         };
-    })->with(coveredOperations());
+    })->with(array_keys(Operations::ALL));
 });
 
 describe('request bodies and options', function () {
@@ -748,6 +737,101 @@ describe('project API tokens', function () {
     })->with(['', '.', '..']);
 });
 
+const TEAM_API_TOKEN = [
+    'id' => 'token_1',
+    'name' => 'Terraform',
+    'abilities' => ['read:projects', 'write:projects'],
+    'allowed_ips' => ['203.0.113.0/24'],
+    'created_via' => 'api',
+    'expires_at' => '2027-01-01T00:00:00Z',
+    'last_used_at' => null,
+    'created_at' => '2026-10-29T09:00:00Z',
+];
+
+describe('team API tokens', function () {
+    it('creates a token and returns its value', function () {
+        [$lettermint, $api] = client(fn () => json(201, ['data' => ['token' => 'lm_team_secret_value'] + TEAM_API_TOKEN, 'message' => 'The token was created.']));
+        $body = ['name' => 'Terraform', 'abilities' => ['read:projects', 'write:projects'], 'expires_at' => '2027-01-01T00:00:00Z'];
+        $result = $lettermint->team->apiTokens->create($body);
+        expect($result)->toBeInstanceOf(TeamApiTokenCreatedResponse::class)
+            ->and($result->data)->toBeInstanceOf(TeamApiTokenSecret::class)
+            ->and($result->data->token)->toBe('lm_team_secret_value')
+            ->and($result->data->id)->toBe('token_1')
+            ->and($result->data->abilities)->toBe(['read:projects', 'write:projects'])
+            ->and($result->data->allowed_ips)->toBe(['203.0.113.0/24'])
+            ->and($result->data->created_via)->toBe(ApiTokenSource::API)
+            ->and($result->data->expires_at)->toBe('2027-01-01T00:00:00Z')
+            ->and($result->message)->toBe('The token was created.')
+            ->and($api->last()->method)->toBe('POST')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/api-tokens')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key')
+            ->and($api->last()->json())->toBe($body);
+        $lettermint->team->apiTokens->create(['name' => 'CI', 'abilities' => ['read:projects']]);
+        expect($api->last()->rawBody)->toBe('{"name":"CI","abilities":["read:projects"]}');
+        $lettermint->team->apiTokens->create(['name' => 'CI', 'abilities' => [], 'expires_at' => null]);
+        expect($api->last()->rawBody)->toBe('{"name":"CI","abilities":[],"expires_at":null}');
+    });
+
+    it('lists, iterates and deletes tokens', function () {
+        [$lettermint, $api] = client(fn (RecordedRequest $request) => match ($request->method) {
+            'GET' => json(200, ['data' => [TEAM_API_TOKEN], 'next_cursor' => null]),
+            default => json(200, ['message' => 'The token was deleted.']),
+        });
+
+        $page = $lettermint->team->apiTokens->list(['page' => ['size' => 10, 'cursor' => 'c1'], 'sort' => ['name']]);
+        expect($page)->toBeInstanceOf(ListTeamApiTokensResponse::class)
+            ->and($page->data[0])->toBeInstanceOf(TeamApiToken::class)
+            ->and($page->data[0]->abilities)->toBe(['read:projects', 'write:projects'])
+            ->and($page->data[0]->has('token'))->toBeFalse()
+            ->and($api->last()->method)->toBe('GET')
+            ->and($api->last()->url)->toStartWith(BASE_URL.'/team/api-tokens?')
+            ->and($api->last()->query)->toBe(['page[size]' => '10', 'page[cursor]' => 'c1', 'sort' => 'name']);
+
+        $tokens = iterator_to_array($lettermint->team->apiTokens->iterate(), false);
+        expect($tokens)->toHaveCount(1)
+            ->and($tokens[0])->toBeInstanceOf(TeamApiToken::class);
+
+        $deleted = $lettermint->team->apiTokens->delete('token/1');
+        expect($deleted)->toBeInstanceOf(MessageResponse::class)
+            ->and($deleted->message)->toBe('The token was deleted.')
+            ->and($api->last()->method)->toBe('DELETE')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/api-tokens/token%2F1')
+            ->and($api->last()->rawBody)->toBe('')
+            ->and($api->last()->headers)->not->toHaveKey('content-type')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key');
+
+        foreach ($api->requests as $request) {
+            expect($request->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+                ->and($request->headers)->not->toHaveKey('x-lettermint-token');
+        }
+    });
+
+    it('throws a ValidationException for an ability the requesting token does not have', function () {
+        [$lettermint] = client(fn () => json(422, ['message' => 'The token cannot grant abilities it does not have.', 'errors' => ['abilities' => ['The token cannot grant abilities it does not have.']]]));
+        $error = thrown(fn () => $lettermint->team->apiTokens->create(['name' => 'Admin', 'abilities' => ['*']]));
+        expect($error::class)->toBe(ValidationException::class)
+            ->and($error->status)->toBe(422)
+            ->and($error->errors)->toBe(['abilities' => ['The token cannot grant abilities it does not have.']]);
+    });
+
+    it('throws a PermissionException when the token may not delete another token', function () {
+        [$lettermint] = client(fn () => json(403, ['message' => 'This action is unauthorized.']));
+        $error = thrown(fn () => $lettermint->team->apiTokens->delete('token_1'));
+        expect($error::class)->toBe(PermissionException::class)
+            ->and($error->status)->toBe(403);
+    });
+
+    it('rejects an empty token ID before any request', function (string $id) {
+        [$lettermint, $api] = client();
+        expect(fn () => $lettermint->team->apiTokens->delete($id))
+            ->toThrow(LettermintConfigException::class, 'team.apiTokens.delete: tokenId must be a non-empty string other than "." and "..".')
+            ->and($api->requests)->toBeEmpty();
+    })->with(['', '.', '..']);
+});
+
 describe('query parameters', function () {
     it('serializes nested arrays to the bracket syntax', function () {
         [$lettermint, $api] = client(fn () => json(200, ['data' => [], 'next_cursor' => null]));
@@ -842,6 +926,7 @@ describe('pagination', function () {
         'team members' => [fn (Lettermint $l) => $l->team->members->iterate(), TeamMemberData::class],
         'team invites' => [fn (Lettermint $l) => $l->team->invites->iterate(), TeamInviteData::class],
         'project API tokens' => [fn (Lettermint $l) => $l->projects->apiTokens->iterate('p'), ProjectApiToken::class],
+        'team API tokens' => [fn (Lettermint $l) => $l->team->apiTokens->iterate(), TeamApiToken::class],
         'webhooks' => [fn (Lettermint $l) => $l->webhooks->iterate(), WebhookListData::class],
         'webhook deliveries' => [fn (Lettermint $l) => $l->webhooks->deliveries->iterate('w'), WebhookDeliveryListData::class],
     ]);

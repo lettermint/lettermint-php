@@ -30,6 +30,9 @@ final class Team extends Resource
     /** Pending team invitations. */
     public readonly TeamInvites $invites;
 
+    /** Team API tokens. */
+    public readonly TeamApiTokens $apiTokens;
+
     /**
      * @internal Use $lettermint->team.
      */
@@ -38,6 +41,7 @@ final class Team extends Resource
         parent::__construct($transport);
         $this->members = new TeamMembers($transport);
         $this->invites = new TeamInvites($transport);
+        $this->apiTokens = new TeamApiTokens($transport);
     }
 
     /**

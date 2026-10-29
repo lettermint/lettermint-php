@@ -14,6 +14,8 @@ use Lettermint\Types\ProjectApiToken;
 use Lettermint\Types\ProjectApiTokenCreatedResponse;
 use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\SendMailResponse;
+use Lettermint\Types\TeamApiToken;
+use Lettermint\Types\TeamApiTokenCreatedResponse;
 use Lettermint\Types\TeamInviteData;
 use Lettermint\Types\TeamRoleData;
 use Lettermint\Webhook;
@@ -83,5 +85,15 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
         assertType(ProjectApiToken::class, $token);
     }
     assertType('string', $lettermint->projects->apiTokens->delete('p', 't')->message);
+    $teamToken = $lettermint->team->apiTokens->create(['name' => 'Terraform', 'abilities' => ['read:projects'], 'expires_at' => null]);
+    assertType(TeamApiTokenCreatedResponse::class, $teamToken);
+    assertType('string', $teamToken->data->token);
+    assertType('list<string>', $teamToken->data->abilities);
+    assertType('string|null', $teamToken->data->expires_at);
+    assertType('list<Lettermint\Types\TeamApiToken>', $lettermint->team->apiTokens->list(['page' => ['size' => 10]])->data);
+    foreach ($lettermint->team->apiTokens->iterate() as $token) {
+        assertType(TeamApiToken::class, $token);
+    }
+    assertType('string', $lettermint->team->apiTokens->delete('t')->message);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }

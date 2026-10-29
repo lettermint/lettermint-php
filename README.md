@@ -280,6 +280,7 @@ $html = $lettermint->messages->html('message-id');
 | `team` | `retrieve`, `update`, `usage`, `roles`, `retrieveRole`, `createRole`, `updateRole`, `deleteRole`, `duplicateRole` |
 | `team->members` | `list`, `iterate`, `retrieve`, `updateAssignment`, `remove` |
 | `team->invites` | `list`, `iterate`, `retrieve`, `create`, `update`, `revoke` |
+| `team->apiTokens` | `list`, `iterate`, `create`, `delete` |
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
 | `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)`, `retry($webhookId, $deliveryId)` |
 | (root) | `ping`, `analytics`, `analyticsPages`, `blockedFileTypes` |
@@ -303,6 +304,18 @@ $invite = $lettermint->team->invites->create([
     'project_access' => ['scope' => 'selected', 'project_ids' => ['project-id']],
 ]);
 $lettermint->team->invites->revoke($invite->id);
+```
+
+`team->apiTokens->create()` creates a Team API token. The new token can only have abilities that the requesting token has; it copies the requesting token's IP allowlist and can't outlive it (`expires_at` defaults to the requesting token's expiry). The response holds the token's value once (`data->token`), so store it right away; `list()` and `iterate()` return the tokens without their values. `delete()` makes a token stop working immediately; a token can only delete tokens whose abilities it also has:
+
+```php
+$created = $lettermint->team->apiTokens->create([
+    'name' => 'Terraform',
+    'abilities' => ['read:projects', 'write:projects'],
+    'expires_at' => '2027-01-01T00:00:00Z',
+]);
+$token = $created->data->token; // shown once
+$lettermint->team->apiTokens->delete($created->data->id);
 ```
 
 `team->createRole()` creates a custom role, on plans that include custom roles; the permissions must include everything they depend on. `team->updateRole()` replaces a custom role's name, description and permissions, and `team->duplicateRole()` copies a role under a new name. Built-in roles cannot be changed or deleted. A role that is still assigned to members, invites or SCIM groups needs a replacement role when you delete it:
