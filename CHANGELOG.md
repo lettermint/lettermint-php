@@ -2,6 +2,16 @@
 
 All notable changes to `lettermint-php` will be documented in this file.
 
+## 3.3.0 - 2026-10-30
+
+### What's Changed
+
+* feat: add the inbound.rejected webhook event by @bjarn in https://github.com/lettermint/lettermint-php/pull/55
+* feat: manage project API tokens by @bjarn in https://github.com/lettermint/lettermint-php/pull/56
+* feat: manage team API tokens by @bjarn in https://github.com/lettermint/lettermint-php/pull/57
+
+**Full Changelog**: https://github.com/lettermint/lettermint-php/compare/3.2.0...3.3.0
+
 ## 3.2.0 - 2026-10-23
 
 ### What's Changed
