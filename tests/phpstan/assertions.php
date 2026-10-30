@@ -10,6 +10,8 @@ use Lettermint\Types\AnalyticsResponse;
 use Lettermint\Types\DomainListData;
 use Lettermint\Types\ListDomainsResponse;
 use Lettermint\Types\PendingSendMailResponse;
+use Lettermint\Types\ProjectApiToken;
+use Lettermint\Types\ProjectApiTokenCreatedResponse;
 use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\SendMailResponse;
 use Lettermint\Types\TeamInviteData;
@@ -72,5 +74,14 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     assertType('string', $lettermint->team->deleteRole('r', ['replacement_role_id' => 'r2'])->message);
     assertType('string', $lettermint->team->members->remove('u')->message);
     assertType('list<Lettermint\Types\TeamMemberData>', $lettermint->team->members->list(['filter' => ['project_id' => 'p']])->data);
+    $projectToken = $lettermint->projects->apiTokens->create('p', ['name' => 'Production', 'short_token' => true]);
+    assertType(ProjectApiTokenCreatedResponse::class, $projectToken);
+    assertType('string', $projectToken->data->token);
+    assertType('Lettermint\Types\SmtpCredentials|null', $projectToken->smtp);
+    assertType('list<Lettermint\Types\ProjectApiToken>', $lettermint->projects->apiTokens->list('p', ['page' => ['size' => 10], 'sort' => ['-created_at']])->data);
+    foreach ($lettermint->projects->apiTokens->iterate('p') as $token) {
+        assertType(ProjectApiToken::class, $token);
+    }
+    assertType('string', $lettermint->projects->apiTokens->delete('p', 't')->message);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }

@@ -12,13 +12,18 @@ use Lettermint\Exceptions\UnexpectedResponseException;
 use Lettermint\Exceptions\ValidationException;
 use Lettermint\Lettermint;
 use Lettermint\Tests\Support\RecordedRequest;
+use Lettermint\Types\ApiTokenSource;
 use Lettermint\Types\DomainListData;
+use Lettermint\Types\ListProjectApiTokensResponse;
 use Lettermint\Types\ListTeamInvitesResponse;
 use Lettermint\Types\MessageEventData;
 use Lettermint\Types\MessageListData;
 use Lettermint\Types\MessageResponse;
 use Lettermint\Types\Operations;
 use Lettermint\Types\PendingSendMailResponse;
+use Lettermint\Types\ProjectApiToken;
+use Lettermint\Types\ProjectApiTokenCreatedResponse;
+use Lettermint\Types\ProjectApiTokenSecret;
 use Lettermint\Types\ProjectListData;
 use Lettermint\Types\RbacConflictCode;
 use Lettermint\Types\RbacPermission;
@@ -26,6 +31,7 @@ use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\RouteData;
 use Lettermint\Types\RouteListData;
 use Lettermint\Types\SendMailResponse;
+use Lettermint\Types\SmtpCredentials;
 use Lettermint\Types\SuppressedRecipientData;
 use Lettermint\Types\TeamInviteData;
 use Lettermint\Types\TeamInviteDataRole;
@@ -46,6 +52,7 @@ const IDS = [
     'userId' => 'user/id',
     'inviteId' => 'invite/1',
     'roleId' => 'role/1',
+    'tokenId' => 'token/1',
     'webhookId' => 'webhook_1',
     'deliveryId' => 'delivery_1',
 ];
@@ -62,6 +69,7 @@ function operationCalls(): array
     return [
         'DELETE /domains/{domainId}' => fn (Lettermint $l) => $l->domains->delete($ids['domainId']),
         'DELETE /projects/{projectId}' => fn (Lettermint $l) => $l->projects->delete($ids['projectId']),
+        'DELETE /projects/{projectId}/api-tokens/{tokenId}' => fn (Lettermint $l) => $l->projects->apiTokens->delete($ids['projectId'], $ids['tokenId']),
         'DELETE /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->delete($ids['projectId']),
         'DELETE /routes/{routeId}' => fn (Lettermint $l) => $l->routes->delete($ids['routeId']),
         'DELETE /suppressions/{suppressionId}' => fn (Lettermint $l) => $l->suppressions->delete($ids['suppressionId']),
@@ -81,6 +89,7 @@ function operationCalls(): array
         'GET /ping' => fn (Lettermint $l) => $l->ping(),
         'GET /projects' => fn (Lettermint $l) => $l->projects->list(),
         'GET /projects/{projectId}' => fn (Lettermint $l) => $l->projects->retrieve($ids['projectId']),
+        'GET /projects/{projectId}/api-tokens' => fn (Lettermint $l) => $l->projects->apiTokens->list($ids['projectId']),
         'GET /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->retrieve($ids['projectId']),
         'GET /projects/{projectId}/routes' => fn (Lettermint $l) => $l->routes->list($ids['projectId']),
         'GET /routes/{routeId}' => fn (Lettermint $l) => $l->routes->retrieve($ids['routeId']),
@@ -107,6 +116,7 @@ function operationCalls(): array
         'POST /messages/{messageId}/process' => fn (Lettermint $l) => $l->messages->process($ids['messageId']),
         'POST /messages/{messageId}/resend' => fn (Lettermint $l) => $l->messages->resend($ids['messageId']),
         'POST /projects' => fn (Lettermint $l) => $l->projects->create(['name' => 'Production']),
+        'POST /projects/{projectId}/api-tokens' => fn (Lettermint $l) => $l->projects->apiTokens->create($ids['projectId'], ['name' => 'Production']),
         'POST /projects/{projectId}/report-forwarding/resend-code' => fn (Lettermint $l) => $l->projects->reportForwarding->resendCode($ids['projectId']),
         'POST /projects/{projectId}/report-forwarding/verify' => fn (Lettermint $l) => $l->projects->reportForwarding->verify($ids['projectId'], ['code' => '123456']),
         'POST /projects/{projectId}/rotate-token' => fn (Lettermint $l) => $l->projects->rotateToken($ids['projectId']),
@@ -134,6 +144,24 @@ function operationCalls(): array
     ];
 }
 
+/**
+ * Operations in the generated table whose SDK methods are added by the next
+ * PR in this stack (team API tokens). That PR removes this list.
+ */
+const PENDING_OPERATIONS = [
+    'DELETE /team/api-tokens/{tokenId}',
+    'GET /team/api-tokens',
+    'POST /team/api-tokens',
+];
+
+/**
+ * @return list<string>
+ */
+function coveredOperations(): array
+{
+    return array_values(array_diff(array_keys(Operations::ALL), PENDING_OPERATIONS));
+}
+
 function responseFor(string $key): Response
 {
     $response = Operations::ALL[$key]['response'];
@@ -153,11 +181,12 @@ function responseFor(string $key): Response
 describe('operation coverage', function () {
     it('has an SDK method for every operation in the generated table', function () {
         $calls = array_keys(operationCalls());
-        $operations = array_keys(Operations::ALL);
+        $operations = coveredOperations();
         sort($calls);
         sort($operations);
         expect($calls)->toBe($operations)
-            ->and($operations)->toHaveCount(71);
+            ->and(Operations::ALL)->toHaveCount(77)
+            ->and(array_diff(PENDING_OPERATIONS, array_keys(Operations::ALL)))->toBe([]);
     });
 
     it('calls the operation with the right method, path, token and result type', function (string $key) {
@@ -191,7 +220,7 @@ describe('operation coverage', function () {
             default => expect($result)->toBeInstanceOf(ApiObject::class)
                 ->and(get_class($result))->toBe('Lettermint\\Types\\'.$type),
         };
-    })->with(array_keys(Operations::ALL));
+    })->with(coveredOperations());
 });
 
 describe('request bodies and options', function () {
@@ -606,6 +635,119 @@ describe('team members', function () {
     });
 });
 
+const PROJECT_API_TOKEN = [
+    'id' => 'token_1',
+    'project_id' => 'project_1',
+    'name' => 'Production',
+    'short_token' => false,
+    'created_via' => 'api',
+    'allowed_ips' => [],
+    'last_used_at' => null,
+    'created_at' => '2026-10-29T09:00:00Z',
+];
+
+describe('project API tokens', function () {
+    it('creates a token and returns its value with the SMTP settings', function () {
+        $created = [
+            'data' => ['token' => 'lm_secret_value'] + PROJECT_API_TOKEN,
+            'smtp' => ['host' => 'smtp.lettermint.co', 'ports' => [465, 587], 'username' => 'lettermint'],
+            'message' => 'The token was created.',
+        ];
+        [$lettermint, $api] = client(fn () => json(201, $created));
+        $result = $lettermint->projects->apiTokens->create('project/1', ['name' => 'Production']);
+        expect($result)->toBeInstanceOf(ProjectApiTokenCreatedResponse::class)
+            ->and($result->data)->toBeInstanceOf(ProjectApiTokenSecret::class)
+            ->and($result->data->token)->toBe('lm_secret_value')
+            ->and($result->data->id)->toBe('token_1')
+            ->and($result->data->project_id)->toBe('project_1')
+            ->and($result->data->short_token)->toBeFalse()
+            ->and($result->data->created_via)->toBe(ApiTokenSource::API)
+            ->and($result->smtp)->toBeInstanceOf(SmtpCredentials::class)
+            ->and($result->smtp?->host)->toBe('smtp.lettermint.co')
+            ->and($result->smtp?->ports)->toBe([465, 587])
+            ->and($result->message)->toBe('The token was created.')
+            ->and($api->last()->method)->toBe('POST')
+            ->and($api->last()->url)->toBe(BASE_URL.'/projects/project%2F1/api-tokens')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key')
+            ->and($api->last()->rawBody)->toBe('{"name":"Production"}');
+        $lettermint->projects->apiTokens->create('project/1', ['name' => 'Printer', 'short_token' => true]);
+        expect($api->last()->json())->toBe(['name' => 'Printer', 'short_token' => true]);
+    });
+
+    it('returns no SMTP settings when SMTP is disabled for the project', function () {
+        [$lettermint] = client(fn () => json(201, ['data' => ['token' => 'lm_secret_value'] + PROJECT_API_TOKEN, 'smtp' => null, 'message' => 'The token was created.']));
+        $result = $lettermint->projects->apiTokens->create('project_1', ['name' => 'Production']);
+        expect($result->smtp)->toBeNull()
+            ->and($result->has('smtp'))->toBeTrue()
+            ->and($result->data->token)->toBe('lm_secret_value');
+    });
+
+    it('lists, iterates and deletes tokens', function () {
+        [$lettermint, $api] = client(fn (RecordedRequest $request) => match ($request->method) {
+            'GET' => json(200, ['data' => [PROJECT_API_TOKEN], 'next_cursor' => null]),
+            default => json(200, ['message' => 'The token was deleted.']),
+        });
+
+        $page = $lettermint->projects->apiTokens->list('project/1', ['page' => ['size' => 10, 'cursor' => 'c1'], 'sort' => ['-created_at']]);
+        expect($page)->toBeInstanceOf(ListProjectApiTokensResponse::class)
+            ->and($page->data[0])->toBeInstanceOf(ProjectApiToken::class)
+            ->and($page->data[0]->name)->toBe('Production')
+            ->and($page->data[0]->has('token'))->toBeFalse()
+            ->and($api->last()->method)->toBe('GET')
+            ->and($api->last()->url)->toStartWith(BASE_URL.'/projects/project%2F1/api-tokens?')
+            ->and($api->last()->query)->toBe(['page[size]' => '10', 'page[cursor]' => 'c1', 'sort' => '-created_at']);
+
+        $tokens = iterator_to_array($lettermint->projects->apiTokens->iterate('project/1'), false);
+        expect($tokens)->toHaveCount(1)
+            ->and($tokens[0])->toBeInstanceOf(ProjectApiToken::class);
+
+        $deleted = $lettermint->projects->apiTokens->delete('project/1', 'token/1');
+        expect($deleted)->toBeInstanceOf(MessageResponse::class)
+            ->and($deleted->message)->toBe('The token was deleted.')
+            ->and($api->last()->method)->toBe('DELETE')
+            ->and($api->last()->url)->toBe(BASE_URL.'/projects/project%2F1/api-tokens/token%2F1')
+            ->and($api->last()->rawBody)->toBe('')
+            ->and($api->last()->headers)->not->toHaveKey('content-type')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key');
+
+        foreach ($api->requests as $request) {
+            expect($request->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+                ->and($request->headers)->not->toHaveKey('x-lettermint-token');
+        }
+    });
+
+    it('throws a ValidationException for an invalid token name', function () {
+        [$lettermint] = client(fn () => json(422, ['message' => 'The name field is required.', 'errors' => ['name' => ['The name field is required.']]]));
+        $error = thrown(fn () => $lettermint->projects->apiTokens->create('project_1', ['name' => '']));
+        expect($error::class)->toBe(ValidationException::class)
+            ->and($error->status)->toBe(422)
+            ->and($error->errors)->toBe(['name' => ['The name field is required.']]);
+    });
+
+    it('throws a NotFoundException for an unknown token', function () {
+        [$lettermint] = client(fn () => json(404, ['message' => 'Not found.']));
+        expect(thrown(fn () => $lettermint->projects->apiTokens->delete('project_1', 'nope')))->toBeInstanceOf(NotFoundException::class);
+    });
+
+    it('rejects an empty project or token ID before any request', function (string $id) {
+        [$lettermint, $api] = client();
+        expect(fn () => $lettermint->projects->apiTokens->list($id))
+            ->toThrow(LettermintConfigException::class, 'projects.apiTokens.list: projectId must be a non-empty string other than "." and "..".')
+            ->and(fn () => $lettermint->projects->apiTokens->iterate($id))
+            ->toThrow(LettermintConfigException::class, 'projects.apiTokens.iterate: projectId')
+            ->and(fn () => $lettermint->projects->apiTokens->create($id, ['name' => 'x']))
+            ->toThrow(LettermintConfigException::class, 'projects.apiTokens.create: projectId')
+            ->and(fn () => $lettermint->projects->apiTokens->delete($id, 'token_1'))
+            ->toThrow(LettermintConfigException::class, 'projects.apiTokens.delete: projectId')
+            ->and(fn () => $lettermint->projects->apiTokens->delete('project_1', $id))
+            ->toThrow(LettermintConfigException::class, 'projects.apiTokens.delete: tokenId')
+            ->and($api->requests)->toBeEmpty();
+    })->with(['', '.', '..']);
+});
+
 describe('query parameters', function () {
     it('serializes nested arrays to the bracket syntax', function () {
         [$lettermint, $api] = client(fn () => json(200, ['data' => [], 'next_cursor' => null]));
@@ -699,6 +841,7 @@ describe('pagination', function () {
         'suppressions' => [fn (Lettermint $l) => $l->suppressions->iterate(), SuppressedRecipientData::class],
         'team members' => [fn (Lettermint $l) => $l->team->members->iterate(), TeamMemberData::class],
         'team invites' => [fn (Lettermint $l) => $l->team->invites->iterate(), TeamInviteData::class],
+        'project API tokens' => [fn (Lettermint $l) => $l->projects->apiTokens->iterate('p'), ProjectApiToken::class],
         'webhooks' => [fn (Lettermint $l) => $l->webhooks->iterate(), WebhookListData::class],
         'webhook deliveries' => [fn (Lettermint $l) => $l->webhooks->deliveries->iterate('w'), WebhookDeliveryListData::class],
     ]);
