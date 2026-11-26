@@ -273,6 +273,7 @@ $html = $lettermint->messages->html('message-id');
 | `messages` | `list`, `iterate`, `retrieve`, `events`, `iterateEvents`, `source`, `html`, `text`, `reschedule`, `cancel`, `resend`, `process` |
 | `projects` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `rotateToken` |
 | `projects->reportForwarding` | `retrieve`, `update`, `delete`, `verify`, `resendCode` |
+| `projects->trackingDomain` | `retrieve`, `update`, `delete`, `verify` |
 | `projects->apiTokens` | `list($projectId)`, `iterate($projectId)`, `create($projectId, …)`, `delete($projectId, $tokenId)` |
 | `routes` | `list($projectId)`, `iterate($projectId)`, `create($projectId, …)`, `retrieve`, `update`, `delete`, `verifyInboundDomain` |
 | `stats` | `retrieve` |
@@ -304,6 +305,23 @@ if ($domain->dkim_transition?->state === DkimTransitionPhase::READY_TO_ACTIVATE)
 $created = $lettermint->projects->apiTokens->create('project-id', ['name' => 'Production']);
 $token = $created->data->token; // shown once
 $lettermint->projects->apiTokens->delete('project-id', $created->data->id);
+```
+
+`projects->trackingDomain->update()` sets the domain that open and click tracking links of the project use, on plans that include custom tracking domains. Add a CNAME record for it that points to `cname_target`. Lettermint checks the record in the background, or `verify()` checks it now; tracking links keep using the Lettermint tracking domain until it is verified. When the check fails, `verify()` throws a `ValidationException` (422) whose `body` holds the outcome. `delete()` goes back to the Lettermint tracking domain:
+
+```php
+use Lettermint\Exceptions\ValidationException;
+use Lettermint\Types\ProjectTrackingDomainVerificationResponse;
+
+$tracking = $lettermint->projects->trackingDomain->update('project-id', ['domain' => 'track.acme.com'])->data;
+echo $tracking->cname_target; // point a CNAME record for track.acme.com here
+
+try {
+    $lettermint->projects->trackingDomain->verify('project-id');
+} catch (ValidationException $e) {
+    $outcome = is_array($e->body) ? ProjectTrackingDomainVerificationResponse::from($e->body) : null;
+    // $outcome?->data->found_cname, $outcome?->data->temporary_error
+}
 ```
 
 `team->members->list()` and `iterate()` take `['filter' => ['project_id' => …]]` to return only the members who can access that project: members with access to all projects and members selected for it. `team->members->remove()` removes a member from the team; the Owner cannot be removed.

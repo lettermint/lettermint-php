@@ -30,6 +30,9 @@ final class Projects extends Resource
     /** API tokens of a project. */
     public readonly ProjectApiTokens $apiTokens;
 
+    /** Custom tracking domain of a project. */
+    public readonly TrackingDomain $trackingDomain;
+
     /**
      * @internal Use $lettermint->projects.
      */
@@ -38,6 +41,7 @@ final class Projects extends Resource
         parent::__construct($transport);
         $this->reportForwarding = new ReportForwarding($transport);
         $this->apiTokens = new ProjectApiTokens($transport);
+        $this->trackingDomain = new TrackingDomain($transport);
     }
 
     /**
