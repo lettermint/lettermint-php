@@ -15,6 +15,7 @@ use Lettermint\Types\TeamApiTokenCreatedResponse;
  *
  * @phpstan-import-type ListTeamApiTokensQuery from \Lettermint\Types\ApiTypes
  * @phpstan-import-type StoreTeamApiTokenData from \Lettermint\Types\ApiTypes
+ * @phpstan-import-type UpdateTeamApiTokenData from \Lettermint\Types\ApiTypes
  */
 final class TeamApiTokens extends Resource
 {
@@ -51,6 +52,21 @@ final class TeamApiTokens extends Resource
     public function create(array $body): TeamApiTokenCreatedResponse
     {
         return $this->transport->object(TeamApiTokenCreatedResponse::class, 'POST /team/api-tokens', 'team.apiTokens.create', json: $body);
+    }
+
+    /**
+     * Renames a team API token or replaces its abilities. Fields you leave out
+     * stay as they are; `abilities` replaces the full list. A token can only
+     * change tokens whose abilities it also has, and only to abilities it has.
+     * To add abilities, the changed token must be limited to the requesting
+     * token's IP allowlist and must not expire after it; otherwise the API
+     * answers 403. The response does not include the token's value.
+     *
+     * @param  UpdateTeamApiTokenData  $body
+     */
+    public function update(string $tokenId, array $body = []): TeamApiToken
+    {
+        return $this->transport->object(TeamApiToken::class, 'PUT /team/api-tokens/{tokenId}', 'team.apiTokens.update', ['tokenId' => $tokenId], json: $body);
     }
 
     /**

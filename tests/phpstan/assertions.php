@@ -94,6 +94,10 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     foreach ($lettermint->team->apiTokens->iterate() as $token) {
         assertType(TeamApiToken::class, $token);
     }
+    $updatedToken = $lettermint->team->apiTokens->update('t', ['name' => 'Renamed', 'abilities' => ['read:projects']]);
+    assertType(TeamApiToken::class, $updatedToken);
+    assertType('list<string>', $updatedToken->abilities);
+    assertType(TeamApiToken::class, $lettermint->team->apiTokens->update('t'));
     assertType('string', $lettermint->team->apiTokens->delete('t')->message);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }
