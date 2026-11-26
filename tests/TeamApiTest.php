@@ -35,6 +35,10 @@ use Lettermint\Types\ProjectApiToken;
 use Lettermint\Types\ProjectApiTokenCreatedResponse;
 use Lettermint\Types\ProjectApiTokenSecret;
 use Lettermint\Types\ProjectListData;
+use Lettermint\Types\ProjectTrackingDomain;
+use Lettermint\Types\ProjectTrackingDomainMutationResponse;
+use Lettermint\Types\ProjectTrackingDomainVerification;
+use Lettermint\Types\ProjectTrackingDomainVerificationResponse;
 use Lettermint\Types\RbacConflictCode;
 use Lettermint\Types\RbacPermission;
 use Lettermint\Types\RetryWebhookDeliveryResponse;
@@ -85,6 +89,7 @@ function operationCalls(): array
         'DELETE /projects/{projectId}' => fn (Lettermint $l) => $l->projects->delete($ids['projectId']),
         'DELETE /projects/{projectId}/api-tokens/{tokenId}' => fn (Lettermint $l) => $l->projects->apiTokens->delete($ids['projectId'], $ids['tokenId']),
         'DELETE /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->delete($ids['projectId']),
+        'DELETE /projects/{projectId}/tracking-domain' => fn (Lettermint $l) => $l->projects->trackingDomain->delete($ids['projectId']),
         'DELETE /routes/{routeId}' => fn (Lettermint $l) => $l->routes->delete($ids['routeId']),
         'DELETE /suppressions/{suppressionId}' => fn (Lettermint $l) => $l->suppressions->delete($ids['suppressionId']),
         'DELETE /team/api-tokens/{tokenId}' => fn (Lettermint $l) => $l->team->apiTokens->delete($ids['tokenId']),
@@ -106,6 +111,7 @@ function operationCalls(): array
         'GET /projects/{projectId}' => fn (Lettermint $l) => $l->projects->retrieve($ids['projectId']),
         'GET /projects/{projectId}/api-tokens' => fn (Lettermint $l) => $l->projects->apiTokens->list($ids['projectId']),
         'GET /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->retrieve($ids['projectId']),
+        'GET /projects/{projectId}/tracking-domain' => fn (Lettermint $l) => $l->projects->trackingDomain->retrieve($ids['projectId']),
         'GET /projects/{projectId}/routes' => fn (Lettermint $l) => $l->routes->list($ids['projectId']),
         'GET /routes/{routeId}' => fn (Lettermint $l) => $l->routes->retrieve($ids['routeId']),
         'GET /stats' => fn (Lettermint $l) => $l->stats->retrieve(['from' => '2026-01-01', 'to' => '2026-01-31']),
@@ -139,6 +145,7 @@ function operationCalls(): array
         'POST /projects/{projectId}/report-forwarding/resend-code' => fn (Lettermint $l) => $l->projects->reportForwarding->resendCode($ids['projectId']),
         'POST /projects/{projectId}/report-forwarding/verify' => fn (Lettermint $l) => $l->projects->reportForwarding->verify($ids['projectId'], ['code' => '123456']),
         'POST /projects/{projectId}/rotate-token' => fn (Lettermint $l) => $l->projects->rotateToken($ids['projectId']),
+        'POST /projects/{projectId}/tracking-domain/verify' => fn (Lettermint $l) => $l->projects->trackingDomain->verify($ids['projectId']),
         'POST /projects/{projectId}/routes' => fn (Lettermint $l) => $l->routes->create($ids['projectId'], ['name' => 'Inbound', 'route_type' => 'inbound']),
         'POST /routes/{routeId}/verify-inbound-domain' => fn (Lettermint $l) => $l->routes->verifyInboundDomain($ids['routeId']),
         'POST /send' => fn (Lettermint $l) => $l->emails->send(['from' => 'a@example.test', 'to' => ['b@example.test'], 'subject' => 'x']),
@@ -155,6 +162,7 @@ function operationCalls(): array
         'PUT /domains/{domainId}/projects' => fn (Lettermint $l) => $l->domains->updateProjects($ids['domainId'], ['project_ids' => ['p']]),
         'PUT /projects/{projectId}' => fn (Lettermint $l) => $l->projects->update($ids['projectId'], ['name' => 'Renamed']),
         'PUT /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->update($ids['projectId'], ['destination' => 'reports@example.test']),
+        'PUT /projects/{projectId}/tracking-domain' => fn (Lettermint $l) => $l->projects->trackingDomain->update($ids['projectId'], ['domain' => 'track.example.test']),
         'PUT /routes/{routeId}' => fn (Lettermint $l) => $l->routes->update($ids['routeId'], ['name' => 'Renamed']),
         'PUT /team' => fn (Lettermint $l) => $l->team->update(['name' => 'Acme']),
         'PUT /team/api-tokens/{tokenId}' => fn (Lettermint $l) => $l->team->apiTokens->update($ids['tokenId'], ['name' => 'Renamed']),
@@ -163,25 +171,6 @@ function operationCalls(): array
         'PUT /team/roles/{roleId}' => fn (Lettermint $l) => $l->team->updateRole($ids['roleId'], ['name' => 'Support', 'permissions' => ['messages:read']]),
         'PUT /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->update($ids['webhookId'], ['basic_auth' => null]),
     ];
-}
-
-/**
- * Operations in the generated table whose SDK methods are added by the next
- * PR in this stack (project tracking domains). That PR removes this list.
- */
-const PENDING_OPERATIONS = [
-    'DELETE /projects/{projectId}/tracking-domain',
-    'GET /projects/{projectId}/tracking-domain',
-    'POST /projects/{projectId}/tracking-domain/verify',
-    'PUT /projects/{projectId}/tracking-domain',
-];
-
-/**
- * @return list<string>
- */
-function coveredOperations(): array
-{
-    return array_values(array_diff(array_keys(Operations::ALL), PENDING_OPERATIONS));
 }
 
 function responseFor(string $key): Response
@@ -203,12 +192,11 @@ function responseFor(string $key): Response
 describe('operation coverage', function () {
     it('has an SDK method for every operation in the generated table', function () {
         $calls = array_keys(operationCalls());
-        $operations = coveredOperations();
+        $operations = array_keys(Operations::ALL);
         sort($calls);
         sort($operations);
         expect($calls)->toBe($operations)
-            ->and(Operations::ALL)->toHaveCount(86)
-            ->and(array_diff(PENDING_OPERATIONS, array_keys(Operations::ALL)))->toBe([]);
+            ->and($operations)->toHaveCount(86);
     });
 
     it('calls the operation with the right method, path, token and result type', function (string $key) {
@@ -242,7 +230,7 @@ describe('operation coverage', function () {
             default => expect($result)->toBeInstanceOf(ApiObject::class)
                 ->and(get_class($result))->toBe('Lettermint\\Types\\'.$type),
         };
-    })->with(coveredOperations());
+    })->with(array_keys(Operations::ALL));
 });
 
 describe('request bodies and options', function () {
@@ -1001,6 +989,122 @@ describe('DKIM upgrade and rotation', function () {
                 ->toThrow(LettermintConfigException::class, "domains.{$method}: domainId must be a non-empty string other than \".\" and \"..\".");
         }
         expect($api->requests)->toBeEmpty();
+    })->with(['', '.', '..']);
+});
+
+const TRACKING_DOMAIN = [
+    'domain' => 'track.acme.com',
+    'verified' => false,
+    'active' => false,
+    'verified_at' => null,
+    'last_verification_at' => null,
+    'cname_target' => 'track.lettermint.co',
+];
+
+const TRACKING_DOMAIN_VERIFICATION = [
+    'domain' => 'track.acme.com',
+    'verified' => true,
+    'verified_at' => '2026-11-26T09:00:00Z',
+    'expected_cname' => 'track.lettermint.co',
+    'found_cname' => 'track.lettermint.co',
+    'temporary_error' => false,
+];
+
+describe('project tracking domain', function () {
+    it('retrieves the tracking domain', function () {
+        [$lettermint, $api] = client(fn () => json(200, TRACKING_DOMAIN));
+        $result = $lettermint->projects->trackingDomain->retrieve('project/1');
+        expect($result)->toBeInstanceOf(ProjectTrackingDomain::class)
+            ->and($result->domain)->toBe('track.acme.com')
+            ->and($result->verified)->toBeFalse()
+            ->and($result->active)->toBeFalse()
+            ->and($result->cname_target)->toBe('track.lettermint.co')
+            ->and($api->last()->method)->toBe('GET')
+            ->and($api->last()->url)->toBe(BASE_URL.'/projects/project%2F1/tracking-domain')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->rawBody)->toBe('');
+    });
+
+    it('reads a project without a custom tracking domain', function () {
+        [$lettermint] = client(fn () => json(200, ['domain' => null] + TRACKING_DOMAIN));
+        expect($lettermint->projects->trackingDomain->retrieve('project_1')->domain)->toBeNull();
+    });
+
+    it('sets the tracking domain', function () {
+        [$lettermint, $api] = client(fn () => json(200, ['data' => TRACKING_DOMAIN, 'message' => 'The tracking domain was saved.']));
+        $result = $lettermint->projects->trackingDomain->update('project/1', ['domain' => 'track.acme.com']);
+        expect($result)->toBeInstanceOf(ProjectTrackingDomainMutationResponse::class)
+            ->and($result->data)->toBeInstanceOf(ProjectTrackingDomain::class)
+            ->and($result->data->domain)->toBe('track.acme.com')
+            ->and($result->message)->toBe('The tracking domain was saved.')
+            ->and($api->last()->method)->toBe('PUT')
+            ->and($api->last()->url)->toBe(BASE_URL.'/projects/project%2F1/tracking-domain')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key')
+            ->and($api->last()->rawBody)->toBe('{"domain":"track.acme.com"}');
+    });
+
+    it('removes the tracking domain (HTTP 204)', function () {
+        [$lettermint, $api] = client(fn () => new Response(204));
+        expect($lettermint->projects->trackingDomain->delete('project/1'))->toBeNull()
+            ->and($api->last()->method)->toBe('DELETE')
+            ->and($api->last()->url)->toBe(BASE_URL.'/projects/project%2F1/tracking-domain')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->rawBody)->toBe('')
+            ->and($api->last()->headers)->not->toHaveKey('content-type');
+    });
+
+    it('verifies the tracking domain', function () {
+        [$lettermint, $api] = client(fn () => json(200, ['data' => TRACKING_DOMAIN_VERIFICATION, 'message' => 'The tracking domain is verified.']));
+        $result = $lettermint->projects->trackingDomain->verify('project/1');
+        expect($result)->toBeInstanceOf(ProjectTrackingDomainVerificationResponse::class)
+            ->and($result->data)->toBeInstanceOf(ProjectTrackingDomainVerification::class)
+            ->and($result->data->verified)->toBeTrue()
+            ->and($result->data->found_cname)->toBe('track.lettermint.co')
+            ->and($result->data->temporary_error)->toBeFalse()
+            ->and($result->message)->toBe('The tracking domain is verified.')
+            ->and($api->last()->method)->toBe('POST')
+            ->and($api->last()->url)->toBe(BASE_URL.'/projects/project%2F1/tracking-domain/verify')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->rawBody)->toBe('')
+            ->and($api->last()->headers)->not->toHaveKey('content-type')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key');
+    });
+
+    it('throws a ValidationException with the outcome when the CNAME check fails', function () {
+        $failed = ['verified' => false, 'verified_at' => null, 'found_cname' => null] + TRACKING_DOMAIN_VERIFICATION;
+        [$lettermint] = client(fn () => json(422, ['data' => $failed, 'message' => 'No CNAME record was found for track.acme.com.']));
+        $error = thrown(fn () => $lettermint->projects->trackingDomain->verify('project_1'));
+        expect($error::class)->toBe(ValidationException::class)
+            ->and($error->status)->toBe(422)
+            ->and($error->getMessage())->toBe('No CNAME record was found for track.acme.com.')
+            ->and($error->body)->toBe(['data' => $failed, 'message' => 'No CNAME record was found for track.acme.com.']);
+        $outcome = ProjectTrackingDomainVerificationResponse::from($error->body);
+        expect($outcome->data->verified)->toBeFalse()
+            ->and($outcome->data->found_cname)->toBeNull()
+            ->and($outcome->data->expected_cname)->toBe('track.lettermint.co');
+    });
+
+    it('throws a ValidationException for an invalid domain', function () {
+        [$lettermint] = client(fn () => json(422, ['message' => 'The domain field format is invalid.', 'errors' => ['domain' => ['The domain field format is invalid.']]]));
+        $error = thrown(fn () => $lettermint->projects->trackingDomain->update('project_1', ['domain' => 'not a domain']));
+        expect($error::class)->toBe(ValidationException::class)
+            ->and($error->errors)->toBe(['domain' => ['The domain field format is invalid.']]);
+    });
+
+    it('rejects an empty project ID before any request', function (string $id) {
+        [$lettermint, $api] = client();
+        expect(fn () => $lettermint->projects->trackingDomain->retrieve($id))
+            ->toThrow(LettermintConfigException::class, 'projects.trackingDomain.retrieve: projectId must be a non-empty string other than "." and "..".')
+            ->and(fn () => $lettermint->projects->trackingDomain->update($id, ['domain' => 'track.acme.com']))
+            ->toThrow(LettermintConfigException::class, 'projects.trackingDomain.update: projectId')
+            ->and(fn () => $lettermint->projects->trackingDomain->delete($id))
+            ->toThrow(LettermintConfigException::class, 'projects.trackingDomain.delete: projectId')
+            ->and(fn () => $lettermint->projects->trackingDomain->verify($id))
+            ->toThrow(LettermintConfigException::class, 'projects.trackingDomain.verify: projectId')
+            ->and($api->requests)->toBeEmpty();
     })->with(['', '.', '..']);
 });
 

@@ -13,6 +13,8 @@ use Lettermint\Types\ListDomainsResponse;
 use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\ProjectApiToken;
 use Lettermint\Types\ProjectApiTokenCreatedResponse;
+use Lettermint\Types\ProjectTrackingDomain;
+use Lettermint\Types\ProjectTrackingDomainVerificationResponse;
 use Lettermint\Types\RetryWebhookDeliveryResponse;
 use Lettermint\Types\SendMailResponse;
 use Lettermint\Types\TeamApiToken;
@@ -107,5 +109,15 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     assertType(DomainMutationResponse::class, $lettermint->domains->cancelDkimUpgrade('d'));
     assertType(DomainMutationResponse::class, $lettermint->domains->activateDkimUpgrade('d'));
     assertType(DomainMutationResponse::class, $lettermint->domains->rotateDkimKey('d'));
+    $tracking = $lettermint->projects->trackingDomain->retrieve('p');
+    assertType(ProjectTrackingDomain::class, $tracking);
+    assertType('string|null', $tracking->domain);
+    assertType('bool', $tracking->verified);
+    assertType(ProjectTrackingDomain::class, $lettermint->projects->trackingDomain->update('p', ['domain' => 'track.example.test'])->data);
+    $verification = $lettermint->projects->trackingDomain->verify('p');
+    assertType(ProjectTrackingDomainVerificationResponse::class, $verification);
+    assertType('bool', $verification->data->temporary_error);
+    assertType('string|null', $verification->data->found_cname);
+    assertType('Lettermint\Types\ProjectTrackingDomain|null', $lettermint->projects->retrieve('p')->tracking_domain);
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }
