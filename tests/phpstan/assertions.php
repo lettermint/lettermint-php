@@ -8,6 +8,7 @@ declare(strict_types=1);
 use Lettermint\Lettermint;
 use Lettermint\Types\AnalyticsResponse;
 use Lettermint\Types\DomainListData;
+use Lettermint\Types\DomainMutationResponse;
 use Lettermint\Types\ListDomainsResponse;
 use Lettermint\Types\PendingSendMailResponse;
 use Lettermint\Types\ProjectApiToken;
@@ -99,5 +100,12 @@ function lettermintTypeAssertions(Lettermint $lettermint): void
     assertType('list<string>', $updatedToken->abilities);
     assertType(TeamApiToken::class, $lettermint->team->apiTokens->update('t'));
     assertType('string', $lettermint->team->apiTokens->delete('t')->message);
+    $upgrade = $lettermint->domains->startDkimUpgrade('d');
+    assertType(DomainMutationResponse::class, $upgrade);
+    assertType('Lettermint\Types\DomainDkimTransition|null', $upgrade->data->dkim_transition);
+    assertType('string|null', $upgrade->data->dkim_transition?->completes_after);
+    assertType(DomainMutationResponse::class, $lettermint->domains->cancelDkimUpgrade('d'));
+    assertType(DomainMutationResponse::class, $lettermint->domains->activateDkimUpgrade('d'));
+    assertType(DomainMutationResponse::class, $lettermint->domains->rotateDkimKey('d'));
     assertType('string', (new Webhook('whsec_x'))->verify('{}', [])->event);
 }

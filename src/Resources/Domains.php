@@ -81,6 +81,62 @@ final class Domains extends Resource
     }
 
     /**
+     * Starts the upgrade of a `legacy_txt` domain to managed DKIM (HTTP 202).
+     * The domain's `dns_records` then list two new DKIM CNAME records with
+     * `verification_scope` `migration`; add them to your DNS. The current DKIM
+     * TXT record keeps signing until the upgrade completes. When
+     * `dkim_transition->state` is `ready_to_activate`, call
+     * activateDkimUpgrade(). Calling this again returns the upgrade that is in
+     * progress; a domain that already uses managed DKIM is returned unchanged
+     * (HTTP 200). A domain that cannot be upgraded throws a
+     * ValidationException (HTTP 422).
+     */
+    public function startDkimUpgrade(string $domainId): DomainMutationResponse
+    {
+        return $this->transport->object(DomainMutationResponse::class, 'POST /domains/{domainId}/dkim/upgrade', 'domains.startDkimUpgrade', ['domainId' => $domainId]);
+    }
+
+    /**
+     * Cancels the managed DKIM upgrade and removes its DKIM CNAME records. The
+     * domain keeps its DKIM TXT record. Without an upgrade in progress nothing
+     * changes, and a key rotation is never cancelled. After the grace period
+     * started, the upgrade cannot be cancelled (ValidationException, HTTP 422).
+     */
+    public function cancelDkimUpgrade(string $domainId): DomainMutationResponse
+    {
+        return $this->transport->object(DomainMutationResponse::class, 'DELETE /domains/{domainId}/dkim/upgrade', 'domains.cancelDkimUpgrade', ['domainId' => $domainId]);
+    }
+
+    /**
+     * Activates the managed DKIM upgrade. Lettermint checks both DKIM CNAME
+     * records again, then starts a grace period in which both keys are
+     * published. The upgrade completes at `dkim_transition->completes_after`,
+     * and `dkim_mode` then changes to `managed_cname`; after that you can
+     * remove the old DKIM TXT record. Calling this again during the grace
+     * period, or after the upgrade completed, changes nothing. Without an
+     * upgrade, or before it is `ready_to_activate`, the API answers with a
+     * ValidationException (HTTP 422).
+     */
+    public function activateDkimUpgrade(string $domainId): DomainMutationResponse
+    {
+        return $this->transport->object(DomainMutationResponse::class, 'POST /domains/{domainId}/dkim/upgrade/activate', 'domains.activateDkimUpgrade', ['domainId' => $domainId]);
+    }
+
+    /**
+     * Starts a DKIM key rotation for a domain with managed DKIM (HTTP 202).
+     * The DKIM CNAME records stay the same, so no DNS change is needed.
+     * Lettermint publishes the new key, then keeps both keys published during
+     * a grace period. Lettermint also rotates keys on a schedule, so you only
+     * need this to replace a key early. Calling this again during a rotation
+     * returns the rotation that is in progress. A domain that cannot be
+     * rotated throws a ValidationException (HTTP 422).
+     */
+    public function rotateDkimKey(string $domainId): DomainMutationResponse
+    {
+        return $this->transport->object(DomainMutationResponse::class, 'POST /domains/{domainId}/dkim/rotate', 'domains.rotateDkimKey', ['domainId' => $domainId]);
+    }
+
+    /**
      * Replaces the projects that may send from the domain.
      *
      * @param  UpdateDomainProjectsData  $body
