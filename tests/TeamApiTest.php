@@ -14,7 +14,15 @@ use Lettermint\Exceptions\ValidationException;
 use Lettermint\Lettermint;
 use Lettermint\Tests\Support\RecordedRequest;
 use Lettermint\Types\ApiTokenSource;
+use Lettermint\Types\DkimMode;
+use Lettermint\Types\DkimTransitionPhase;
+use Lettermint\Types\DkimTransitionType;
+use Lettermint\Types\DnsVerificationScope;
+use Lettermint\Types\DomainData;
+use Lettermint\Types\DomainDkimTransition;
+use Lettermint\Types\DomainDnsRecordData;
 use Lettermint\Types\DomainListData;
+use Lettermint\Types\DomainMutationResponse;
 use Lettermint\Types\ListProjectApiTokensResponse;
 use Lettermint\Types\ListTeamApiTokensResponse;
 use Lettermint\Types\ListTeamInvitesResponse;
@@ -73,6 +81,7 @@ function operationCalls(): array
 
     return [
         'DELETE /domains/{domainId}' => fn (Lettermint $l) => $l->domains->delete($ids['domainId']),
+        'DELETE /domains/{domainId}/dkim/upgrade' => fn (Lettermint $l) => $l->domains->cancelDkimUpgrade($ids['domainId']),
         'DELETE /projects/{projectId}' => fn (Lettermint $l) => $l->projects->delete($ids['projectId']),
         'DELETE /projects/{projectId}/api-tokens/{tokenId}' => fn (Lettermint $l) => $l->projects->apiTokens->delete($ids['projectId'], $ids['tokenId']),
         'DELETE /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->delete($ids['projectId']),
@@ -117,6 +126,9 @@ function operationCalls(): array
         'PATCH /messages/{messageId}' => fn (Lettermint $l) => $l->messages->reschedule($ids['messageId'], ['scheduled_at' => '2026-10-01T09:00:00Z']),
         'POST /analytics' => fn (Lettermint $l) => $l->analytics(['metrics' => ['accepted']]),
         'POST /domains' => fn (Lettermint $l) => $l->domains->create(['domain' => 'example.test']),
+        'POST /domains/{domainId}/dkim/rotate' => fn (Lettermint $l) => $l->domains->rotateDkimKey($ids['domainId']),
+        'POST /domains/{domainId}/dkim/upgrade' => fn (Lettermint $l) => $l->domains->startDkimUpgrade($ids['domainId']),
+        'POST /domains/{domainId}/dkim/upgrade/activate' => fn (Lettermint $l) => $l->domains->activateDkimUpgrade($ids['domainId']),
         'POST /domains/{domainId}/dns-records/verify' => fn (Lettermint $l) => $l->domains->verifyDnsRecords($ids['domainId']),
         'POST /domains/{domainId}/dns-records/{recordId}/verify' => fn (Lettermint $l) => $l->domains->verifyDnsRecord($ids['domainId'], $ids['recordId']),
         'POST /messages/{messageId}/cancel' => fn (Lettermint $l) => $l->messages->cancel($ids['messageId']),
@@ -155,14 +167,9 @@ function operationCalls(): array
 
 /**
  * Operations in the generated table whose SDK methods are added by the next
- * PRs in this stack: DKIM upgrade and rotation, then project tracking domains.
- * Each of those PRs removes its operations; the last one removes this list.
+ * PR in this stack (project tracking domains). That PR removes this list.
  */
 const PENDING_OPERATIONS = [
-    'DELETE /domains/{domainId}/dkim/upgrade',
-    'POST /domains/{domainId}/dkim/rotate',
-    'POST /domains/{domainId}/dkim/upgrade',
-    'POST /domains/{domainId}/dkim/upgrade/activate',
     'DELETE /projects/{projectId}/tracking-domain',
     'GET /projects/{projectId}/tracking-domain',
     'POST /projects/{projectId}/tracking-domain/verify',
@@ -900,6 +907,100 @@ describe('team API tokens', function () {
             ->and(fn () => $lettermint->team->apiTokens->update($id, ['name' => 'x']))
             ->toThrow(LettermintConfigException::class, 'team.apiTokens.update: tokenId must be a non-empty string other than "." and "..".')
             ->and($api->requests)->toBeEmpty();
+    })->with(['', '.', '..']);
+});
+
+const DKIM_DOMAIN = [
+    'id' => 'domain_1',
+    'domain' => 'acme.com',
+    'dkim_mode' => 'legacy_txt',
+    'rotation_ready' => false,
+    'dkim_transition' => ['type' => 'legacy_upgrade', 'state' => 'awaiting_dns', 'completes_after' => null],
+    'status_changed_at' => null,
+    'dns_records' => [[
+        'id' => 'record_1',
+        'type' => 'CNAME',
+        'hostname' => 'lm1._domainkey',
+        'fqdn' => 'lm1._domainkey.acme.com',
+        'content' => 'lm1.dkim.lettermint.co',
+        'status' => 'pending',
+        'purpose' => 'dkim',
+        'verification_scope' => 'migration',
+        'required_for_verification' => false,
+        'verified_at' => null,
+        'last_checked_at' => null,
+    ]],
+    'created_at' => '2026-11-01T09:00:00Z',
+];
+
+describe('DKIM upgrade and rotation', function () {
+    it('starts, activates and cancels the upgrade and rotates the key', function (string $method, string $httpMethod, string $path, int $status) {
+        [$lettermint, $api] = client(fn () => json($status, ['data' => DKIM_DOMAIN, 'message' => 'Done.']));
+        $result = $lettermint->domains->{$method}('domain/1');
+        expect($result)->toBeInstanceOf(DomainMutationResponse::class)
+            ->and($result->data)->toBeInstanceOf(DomainData::class)
+            ->and($result->message)->toBe('Done.')
+            ->and($api->requests)->toHaveCount(1)
+            ->and($api->last()->method)->toBe($httpMethod)
+            ->and($api->last()->url)->toBe(BASE_URL.'/domains/domain%2F1'.$path)
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->rawBody)->toBe('')
+            ->and($api->last()->headers)->not->toHaveKey('content-type')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key');
+    })->with([
+        'start (202)' => ['startDkimUpgrade', 'POST', '/dkim/upgrade', 202],
+        'start on a managed domain (200)' => ['startDkimUpgrade', 'POST', '/dkim/upgrade', 200],
+        'cancel' => ['cancelDkimUpgrade', 'DELETE', '/dkim/upgrade', 200],
+        'activate' => ['activateDkimUpgrade', 'POST', '/dkim/upgrade/activate', 200],
+        'rotate' => ['rotateDkimKey', 'POST', '/dkim/rotate', 202],
+    ]);
+
+    it('reads the transition and the migration records of the domain', function () {
+        [$lettermint] = client(fn () => json(202, ['data' => DKIM_DOMAIN, 'message' => 'The DKIM upgrade started.']));
+        $domain = $lettermint->domains->startDkimUpgrade('domain_1')->data;
+        expect($domain->dkim_mode)->toBe(DkimMode::LEGACY_TXT)
+            ->and($domain->dkim_transition)->toBeInstanceOf(DomainDkimTransition::class)
+            ->and($domain->dkim_transition?->type)->toBe(DkimTransitionType::LEGACY_UPGRADE)
+            ->and($domain->dkim_transition?->state)->toBe(DkimTransitionPhase::AWAITING_DNS)
+            ->and($domain->dkim_transition?->completes_after)->toBeNull()
+            ->and($domain->dns_records[0] ?? null)->toBeInstanceOf(DomainDnsRecordData::class)
+            ->and($domain->dns_records[0]->verification_scope ?? null)->toBe(DnsVerificationScope::MIGRATION);
+    });
+
+    it('reads a rotation in its grace period, and no transition', function () {
+        $rotating = ['dkim_mode' => 'managed_cname', 'dkim_transition' => ['type' => 'rotation', 'state' => 'grace_period', 'completes_after' => '2026-11-30T09:00:00Z']] + DKIM_DOMAIN;
+        $done = ['dkim_mode' => 'managed_cname', 'dkim_transition' => null] + DKIM_DOMAIN;
+        $legacy = DKIM_DOMAIN;
+        unset($legacy['dkim_transition']);
+        $responses = [$rotating, $done, $legacy];
+        [$lettermint] = client(function () use (&$responses) {
+            return json(200, ['data' => array_shift($responses), 'message' => 'Done.']);
+        });
+        $transition = $lettermint->domains->rotateDkimKey('domain_1')->data->dkim_transition;
+        expect($transition?->type)->toBe(DkimTransitionType::ROTATION)
+            ->and($transition?->state)->toBe(DkimTransitionPhase::GRACE_PERIOD)
+            ->and($transition?->completes_after)->toBe('2026-11-30T09:00:00Z')
+            ->and($lettermint->domains->activateDkimUpgrade('domain_1')->data->dkim_transition)->toBeNull()
+            ->and($lettermint->domains->cancelDkimUpgrade('domain_1')->data->dkim_transition)->toBeNull();
+    });
+
+    it('throws a ValidationException when the domain is not in the right state', function () {
+        [$lettermint] = client(fn () => json(422, ['error' => ['code' => 'DKIM_UPGRADE_NOT_READY', 'message' => 'The DKIM CNAME records are not verified yet.']]));
+        $error = thrown(fn () => $lettermint->domains->activateDkimUpgrade('domain_1'));
+        expect($error::class)->toBe(ValidationException::class)
+            ->and($error->status)->toBe(422)
+            ->and($error->errorCode)->toBe('DKIM_UPGRADE_NOT_READY')
+            ->and($error->getMessage())->toBe('The DKIM CNAME records are not verified yet.');
+    });
+
+    it('rejects an empty domain ID before any request', function (string $id) {
+        [$lettermint, $api] = client();
+        foreach (['startDkimUpgrade', 'cancelDkimUpgrade', 'activateDkimUpgrade', 'rotateDkimKey'] as $method) {
+            expect(fn () => $lettermint->domains->{$method}($id))
+                ->toThrow(LettermintConfigException::class, "domains.{$method}: domainId must be a non-empty string other than \".\" and \"..\".");
+        }
+        expect($api->requests)->toBeEmpty();
     })->with(['', '.', '..']);
 });
 

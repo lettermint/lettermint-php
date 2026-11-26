@@ -269,7 +269,7 @@ $html = $lettermint->messages->html('message-id');
 
 | Property | Methods |
 | --- | --- |
-| `domains` | `list`, `iterate`, `create`, `retrieve`, `delete`, `verifyDnsRecords`, `verifyDnsRecord`, `updateProjects` |
+| `domains` | `list`, `iterate`, `create`, `retrieve`, `delete`, `verifyDnsRecords`, `verifyDnsRecord`, `updateProjects`, `startDkimUpgrade`, `cancelDkimUpgrade`, `activateDkimUpgrade`, `rotateDkimKey` |
 | `messages` | `list`, `iterate`, `retrieve`, `events`, `iterateEvents`, `source`, `html`, `text`, `reschedule`, `cancel`, `resend`, `process` |
 | `projects` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `rotateToken` |
 | `projects->reportForwarding` | `retrieve`, `update`, `delete`, `verify`, `resendCode` |
@@ -284,6 +284,19 @@ $html = $lettermint->messages->html('message-id');
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
 | `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)`, `retry($webhookId, $deliveryId)` |
 | (root) | `ping`, `analytics`, `analyticsPages`, `blockedFileTypes` |
+
+`domains->startDkimUpgrade()` moves a domain with a DKIM TXT record (`dkim_mode` `legacy_txt`) to managed DKIM. The domain's `dns_records` then list two new DKIM CNAME records with `verification_scope` `migration`; add them to your DNS, and the old TXT record keeps signing in the meantime. `dkim_transition` shows where the upgrade is. When its `state` is `ready_to_activate`, `activateDkimUpgrade()` starts a grace period in which both keys are published; the upgrade completes at `completes_after`, after which you can remove the TXT record. `cancelDkimUpgrade()` stops an upgrade before its grace period. `rotateDkimKey()` replaces the key of a managed DKIM domain early, without DNS changes (Lettermint also rotates keys on a schedule). A domain that is not in the right state throws a `ValidationException` (422):
+
+```php
+use Lettermint\Types\DkimTransitionPhase;
+
+$domain = $lettermint->domains->startDkimUpgrade('domain-id')->data;
+// ... add the new CNAME records, then later:
+$domain = $lettermint->domains->retrieve('domain-id');
+if ($domain->dkim_transition?->state === DkimTransitionPhase::READY_TO_ACTIVATE) {
+    $lettermint->domains->activateDkimUpgrade('domain-id');
+}
+```
 
 `projects->apiTokens->create()` creates a Project API token (a sending token for the project). The response holds the token's value once (`data->token`), so store it right away; `list()` and `iterate()` return the tokens without their values. Use the token to send through the API, or as the SMTP password when SMTP is enabled for the project (`smtp` then holds the host, ports and username). `delete()` makes a token stop working immediately:
 
