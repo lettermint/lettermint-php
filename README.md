@@ -280,7 +280,7 @@ $html = $lettermint->messages->html('message-id');
 | `team` | `retrieve`, `update`, `usage`, `roles`, `retrieveRole`, `createRole`, `updateRole`, `deleteRole`, `duplicateRole` |
 | `team->members` | `list`, `iterate`, `retrieve`, `updateAssignment`, `remove` |
 | `team->invites` | `list`, `iterate`, `retrieve`, `create`, `update`, `revoke` |
-| `team->apiTokens` | `list`, `iterate`, `create`, `delete` |
+| `team->apiTokens` | `list`, `iterate`, `create`, `update`, `delete` |
 | `webhooks` | `list`, `iterate`, `create`, `retrieve`, `update`, `delete`, `test`, `regenerateSecret` |
 | `webhooks->deliveries` | `list($webhookId)`, `iterate($webhookId)`, `retrieve($webhookId, $deliveryId)`, `retry($webhookId, $deliveryId)` |
 | (root) | `ping`, `analytics`, `analyticsPages`, `blockedFileTypes` |
@@ -306,7 +306,7 @@ $invite = $lettermint->team->invites->create([
 $lettermint->team->invites->revoke($invite->id);
 ```
 
-`team->apiTokens->create()` creates a Team API token. The new token can only have abilities that the requesting token has; it copies the requesting token's IP allowlist and can't outlive it (`expires_at` defaults to the requesting token's expiry). The response holds the token's value once (`data->token`), so store it right away; `list()` and `iterate()` return the tokens without their values. `delete()` makes a token stop working immediately; a token can only delete tokens whose abilities it also has:
+`team->apiTokens->create()` creates a Team API token. The new token can only have abilities that the requesting token has; it copies the requesting token's IP allowlist and can't outlive it (`expires_at` defaults to the requesting token's expiry). The response holds the token's value once (`data->token`), so store it right away; `list()` and `iterate()` return the tokens without their values. `update()` renames a token or replaces its full list of abilities; a token can only change tokens whose abilities it also has, and only to abilities it has. `delete()` makes a token stop working immediately; a token can only delete tokens whose abilities it also has:
 
 ```php
 $created = $lettermint->team->apiTokens->create([
@@ -315,6 +315,7 @@ $created = $lettermint->team->apiTokens->create([
     'expires_at' => '2027-01-01T00:00:00Z',
 ]);
 $token = $created->data->token; // shown once
+$lettermint->team->apiTokens->update($created->data->id, ['abilities' => ['read:projects']]);
 $lettermint->team->apiTokens->delete($created->data->id);
 ```
 

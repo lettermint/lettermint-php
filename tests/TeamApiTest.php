@@ -145,11 +145,36 @@ function operationCalls(): array
         'PUT /projects/{projectId}/report-forwarding' => fn (Lettermint $l) => $l->projects->reportForwarding->update($ids['projectId'], ['destination' => 'reports@example.test']),
         'PUT /routes/{routeId}' => fn (Lettermint $l) => $l->routes->update($ids['routeId'], ['name' => 'Renamed']),
         'PUT /team' => fn (Lettermint $l) => $l->team->update(['name' => 'Acme']),
+        'PUT /team/api-tokens/{tokenId}' => fn (Lettermint $l) => $l->team->apiTokens->update($ids['tokenId'], ['name' => 'Renamed']),
         'PUT /team/invites/{inviteId}' => fn (Lettermint $l) => $l->team->invites->update($ids['inviteId'], ['email' => 'jane@example.test', 'role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
         'PUT /team/members/{userId}/assignment' => fn (Lettermint $l) => $l->team->members->updateAssignment($ids['userId'], ['role_id' => 'role_1', 'project_access' => ['scope' => 'all']]),
         'PUT /team/roles/{roleId}' => fn (Lettermint $l) => $l->team->updateRole($ids['roleId'], ['name' => 'Support', 'permissions' => ['messages:read']]),
         'PUT /webhooks/{webhookId}' => fn (Lettermint $l) => $l->webhooks->update($ids['webhookId'], ['basic_auth' => null]),
     ];
+}
+
+/**
+ * Operations in the generated table whose SDK methods are added by the next
+ * PRs in this stack: DKIM upgrade and rotation, then project tracking domains.
+ * Each of those PRs removes its operations; the last one removes this list.
+ */
+const PENDING_OPERATIONS = [
+    'DELETE /domains/{domainId}/dkim/upgrade',
+    'POST /domains/{domainId}/dkim/rotate',
+    'POST /domains/{domainId}/dkim/upgrade',
+    'POST /domains/{domainId}/dkim/upgrade/activate',
+    'DELETE /projects/{projectId}/tracking-domain',
+    'GET /projects/{projectId}/tracking-domain',
+    'POST /projects/{projectId}/tracking-domain/verify',
+    'PUT /projects/{projectId}/tracking-domain',
+];
+
+/**
+ * @return list<string>
+ */
+function coveredOperations(): array
+{
+    return array_values(array_diff(array_keys(Operations::ALL), PENDING_OPERATIONS));
 }
 
 function responseFor(string $key): Response
@@ -171,11 +196,12 @@ function responseFor(string $key): Response
 describe('operation coverage', function () {
     it('has an SDK method for every operation in the generated table', function () {
         $calls = array_keys(operationCalls());
-        $operations = array_keys(Operations::ALL);
+        $operations = coveredOperations();
         sort($calls);
         sort($operations);
         expect($calls)->toBe($operations)
-            ->and($operations)->toHaveCount(77);
+            ->and(Operations::ALL)->toHaveCount(86)
+            ->and(array_diff(PENDING_OPERATIONS, array_keys(Operations::ALL)))->toBe([]);
     });
 
     it('calls the operation with the right method, path, token and result type', function (string $key) {
@@ -209,7 +235,7 @@ describe('operation coverage', function () {
             default => expect($result)->toBeInstanceOf(ApiObject::class)
                 ->and(get_class($result))->toBe('Lettermint\\Types\\'.$type),
         };
-    })->with(array_keys(Operations::ALL));
+    })->with(coveredOperations());
 });
 
 describe('request bodies and options', function () {
@@ -824,10 +850,55 @@ describe('team API tokens', function () {
             ->and($error->status)->toBe(403);
     });
 
+    it('updates a token\'s name and abilities', function () {
+        $updated = ['name' => 'Renamed', 'abilities' => ['read:projects']] + TEAM_API_TOKEN;
+        [$lettermint, $api] = client(fn () => json(200, $updated));
+        $body = ['name' => 'Renamed', 'abilities' => ['read:projects']];
+        $result = $lettermint->team->apiTokens->update('token/1', $body);
+        expect($result)->toBeInstanceOf(TeamApiToken::class)
+            ->and($result->id)->toBe('token_1')
+            ->and($result->name)->toBe('Renamed')
+            ->and($result->abilities)->toBe(['read:projects'])
+            ->and($result->created_via)->toBe(ApiTokenSource::API)
+            ->and($result->has('token'))->toBeFalse()
+            ->and($api->last()->method)->toBe('PUT')
+            ->and($api->last()->url)->toBe(BASE_URL.'/team/api-tokens/token%2F1')
+            ->and($api->last()->headers['authorization'])->toBe('Bearer '.TEAM_TOKEN)
+            ->and($api->last()->headers)->not->toHaveKey('x-lettermint-token')
+            ->and($api->last()->headers['content-type'])->toBe('application/json')
+            ->and($api->last()->headers)->not->toHaveKey('idempotency-key')
+            ->and($api->last()->json())->toBe($body);
+        $lettermint->team->apiTokens->update('token_1', ['name' => 'CI']);
+        expect($api->last()->rawBody)->toBe('{"name":"CI"}');
+        $lettermint->team->apiTokens->update('token_1', ['abilities' => []]);
+        expect($api->last()->rawBody)->toBe('{"abilities":[]}');
+        $lettermint->team->apiTokens->update('token_1');
+        expect($api->last()->rawBody)->toBe('{}')
+            ->and($api->last()->headers['content-type'])->toBe('application/json');
+    });
+
+    it('throws a PermissionException when the token may not grant an ability', function () {
+        [$lettermint] = client(fn () => json(403, ['error' => ['code' => 'ABILITY_NOT_HELD', 'message' => 'The token cannot grant abilities it does not have.']]));
+        $error = thrown(fn () => $lettermint->team->apiTokens->update('token_1', ['abilities' => ['*']]));
+        expect($error::class)->toBe(PermissionException::class)
+            ->and($error->status)->toBe(403)
+            ->and($error->errorCode)->toBe('ABILITY_NOT_HELD');
+    });
+
+    it('throws a ValidationException for an invalid update', function () {
+        [$lettermint] = client(fn () => json(422, ['message' => 'The name field must not be greater than 255 characters.', 'errors' => ['name' => ['The name field must not be greater than 255 characters.']]]));
+        $error = thrown(fn () => $lettermint->team->apiTokens->update('token_1', ['name' => str_repeat('x', 256)]));
+        expect($error::class)->toBe(ValidationException::class)
+            ->and($error->status)->toBe(422)
+            ->and($error->errors)->toBe(['name' => ['The name field must not be greater than 255 characters.']]);
+    });
+
     it('rejects an empty token ID before any request', function (string $id) {
         [$lettermint, $api] = client();
         expect(fn () => $lettermint->team->apiTokens->delete($id))
             ->toThrow(LettermintConfigException::class, 'team.apiTokens.delete: tokenId must be a non-empty string other than "." and "..".')
+            ->and(fn () => $lettermint->team->apiTokens->update($id, ['name' => 'x']))
+            ->toThrow(LettermintConfigException::class, 'team.apiTokens.update: tokenId must be a non-empty string other than "." and "..".')
             ->and($api->requests)->toBeEmpty();
     })->with(['', '.', '..']);
 });
